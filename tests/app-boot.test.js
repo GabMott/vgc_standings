@@ -517,5 +517,19 @@ describe('Gist single-file bundle & UI controls', () => {
     // Wait a tick for initial renderNow() to finish and update status
     await new Promise((r) => setTimeout(r, 25));
     assert.match(doc.byId.get('status').textContent, /Rendered \d+×\d+px/);
+
+    // Reloading the page automatically restores in-progress fields, redactions, and entry mode from localStorage
+    locInput.value = 'Seattle';
+    locInput.dispatch('input');
+    const docReloaded = createMockDocument({ readyState: 'loading', includePresets: false });
+    const reloadSandbox = { ...sandbox, document: docReloaded };
+    reloadSandbox.globalThis = reloadSandbox;
+    vm.runInNewContext(match[1], reloadSandbox, { filename: 'vgc-standings-bundle-reload.js' });
+    assert.equal(docReloaded.byId.get('f-location').value, 'Seattle');
+    assert.equal(docReloaded.byId.get('f-topCut').value, '2');
+    const reloadedCard0 = docReloaded.byId.get('players').children[0];
+    assert.equal(reloadedCard0.children[1].children[0].children[0].checked, true, 'Redact name persists across reload');
+    assert.equal(reloadedCard0.children[1].children[1].children[0].checked, true, 'Redact team persists across reload');
+    assert.equal(reloadedCard0.children[2].children[2].children[1].className, 'manual-grid', 'Manual mode persists across reload');
   });
 });

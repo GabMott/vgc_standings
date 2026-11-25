@@ -190,15 +190,68 @@ export function initApp(doc = globalThis.document) {
   const saveDraftBtn = $('btn-draft-save');
   const deleteDraftBtn = $('btn-draft-delete');
 
-  let tournament = presetsSelect ? createPresetTournament(DEFAULT_PRESET_ID) : createDefaultTournament();
+  const AUTOSAVE_KEY = 'vgc-standings:autosave';
+  const getStorage = () => {
+    try {
+      return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const loadAutosave = () => {
+    try {
+      const raw = getStorage()?.getItem(AUTOSAVE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const t = deserializeTournament(parsed?.tournament ?? parsed);
+      const modes = parsed?.entryModes && typeof parsed.entryModes === 'object' ? parsed.entryModes : {};
+      return { tournament: t, entryModes: modes };
+    } catch {
+      return null;
+    }
+  };
+
+  const restored = presetsSelect ? null : loadAutosave();
+  let tournament = presetsSelect
+    ? createPresetTournament(DEFAULT_PRESET_ID)
+    : (restored?.tournament ?? createDefaultTournament());
   let legacyDateFallback = '';
   let standingsStash = [];
   const entryModes = new Map();
+  if (restored?.entryModes) {
+    for (const [k, v] of Object.entries(restored.entryModes)) {
+      if (v === 'manual' || v === 'paste') entryModes.set(k, v);
+    }
+  }
   const manualSlotsByEntry = new Map();
   const imageCache = new Map();
   let renderTimer = null;
   let isRendering = false;
   let pendingRender = false;
+
+  const persistAutosave = () => {
+    try {
+      const s = getStorage();
+      if (!s) return;
+      const modes = {};
+      for (const [k, v] of entryModes.entries()) {
+        if (v === 'manual' || v === 'paste') modes[k] = v;
+      }
+      s.setItem(AUTOSAVE_KEY, JSON.stringify({
+        tournament: JSON.parse(serializeTournament(tournament)),
+        entryModes: modes,
+      }));
+    } catch {
+      /* ignore quota / private-browsing errors */
+    }
+  };
+  const clearAutosave = () => {
+    try {
+      getStorage()?.removeItem(AUTOSAVE_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Seed searchable Pokémon catalog immediately from presets + special table,
   // then enrich asynchronously with the full PokéAPI species/form list.
@@ -388,6 +441,7 @@ export function initApp(doc = globalThis.document) {
     tournament.signature = '';
     tournament.updatedAt = new Date().toISOString();
     tournament.themeConfig = { themeId: DEFAULT_THEME_ID, overrides: {} };
+    persistAutosave();
   }
 
   function autoSizeTextarea(el) {
@@ -456,6 +510,7 @@ export function initApp(doc = globalThis.document) {
     }
     entry.pokemon = nextPokemon;
     entry.teamSource = nextPokemon.map((m) => m.name).join('\n\n');
+    persistAutosave();
     scheduleRender();
 
     await Promise.all(
@@ -467,6 +522,7 @@ export function initApp(doc = globalThis.document) {
       }),
     );
     entry.warnings = warnings;
+    persistAutosave();
     if (warnEl) {
       warnEl.textContent = warnings.join(' • ');
       warnEl.hidden = warnings.length === 0;
@@ -502,6 +558,7 @@ export function initApp(doc = globalThis.document) {
         tournament.standings[index - 1] = entry;
         tournament.standings[index] = tmp;
         syncPlacingsFromOrder();
+        persistAutosave();
         renderPlayerList();
         scheduleRender();
       });
@@ -517,6 +574,7 @@ export function initApp(doc = globalThis.document) {
         tournament.standings[index + 1] = entry;
         tournament.standings[index] = tmp;
         syncPlacingsFromOrder();
+        persistAutosave();
         renderPlayerList();
         scheduleRender();
       });
@@ -549,10 +607,12 @@ export function initApp(doc = globalThis.document) {
 
       const nameField = makeInput('Player Name', entry.name, { placeholder: 'Trainer name', maxlength: 60 }, (v) => {
         entry.name = sanitizeText(v, { maxLength: 60 });
+        persistAutosave();
         scheduleRender();
       });
       const handleField = makeInput('Handle', entry.handle, { placeholder: '@handle', maxlength: 32 }, (v) => {
         entry.handle = v.trim() ? sanitizeHandle(v) : '';
+        persistAutosave();
         scheduleRender();
       });
 
@@ -611,6 +671,7 @@ export function initApp(doc = globalThis.document) {
               scheduleRender();
             }
           }
+          persistAutosave();
         });
         ta.addEventListener('blur', async () => {
           if (entry.teamSource && entry.teamSource.trim()) {
@@ -618,6 +679,7 @@ export function initApp(doc = globalThis.document) {
             manualSlotsByEntry.delete(entry.id);
             warnBox.textContent = (entry.warnings || []).join(' • ');
             warnBox.hidden = !(entry.warnings && entry.warnings.length);
+            persistAutosave();
             await renderNow();
           }
         });
@@ -827,6 +889,7 @@ export function initApp(doc = globalThis.document) {
       pasteBtn.addEventListener('click', () => {
         if ((entryModes.get(entry.id) || 'paste') === 'paste') return;
         entryModes.set(entry.id, 'paste');
+        persistAutosave();
         mountTeamMode('paste');
       });
 
@@ -838,6 +901,7 @@ export function initApp(doc = globalThis.document) {
         }
         syncManualSlotsFromPokemon(entry);
         entryModes.set(entry.id, 'manual');
+        persistAutosave();
         mountTeamMode('manual');
       });
 
@@ -870,11 +934,13 @@ export function initApp(doc = globalThis.document) {
       const redactNameToggle = makeToggle('Redact name', entry.redactName, (checked) => {
         entry.redactName = checked;
         applyNameRedactionState();
+        persistAutosave();
         renderNow();
       });
       const redactTeamToggle = makeToggle('Redact team', entry.redactTeam, (checked) => {
         entry.redactTeam = checked;
         applyTeamRedactionState();
+        persistAutosave();
         renderNow();
       });
       redactBar.append(redactNameToggle, redactTeamToggle);
@@ -886,9 +952,17 @@ export function initApp(doc = globalThis.document) {
     });
   }
 
-  async function resolveEntryTeam(entry) {
+  async function resolveEntryTeam(entry, { skipIfResolved = false } = {}) {
     if (entry.redactTeam === true) {
       entry.warnings = [];
+      return;
+    }
+    if (
+      skipIfResolved &&
+      Array.isArray(entry.pokemon) &&
+      entry.pokemon.length > 0 &&
+      entry.pokemon.every((m) => m && m.spriteUrl)
+    ) {
       return;
     }
     const src = (entry.teamSource || '').trim();
@@ -902,9 +976,9 @@ export function initApp(doc = globalThis.document) {
     entry.warnings = warnings;
   }
 
-  async function resolveAllTeams() {
+  async function resolveAllTeams({ skipIfResolved = false } = {}) {
     setStatus('Fetching teams & Pokémon sprites…');
-    await Promise.all(tournament.standings.map((entry) => resolveEntryTeam(entry)));
+    await Promise.all(tournament.standings.map((entry) => resolveEntryTeam(entry, { skipIfResolved })));
     renderPlayerList();
   }
 
@@ -1091,6 +1165,7 @@ export function initApp(doc = globalThis.document) {
     const selected = Number.parseInt(topCutSelect.value, 10);
     if (!Number.isFinite(selected) || selected <= 0) return;
     resizeStandings(selected);
+    persistAutosave();
     renderPlayerList();
     scheduleRender();
     announce(`Top Cut set to ${selected} players.`);
@@ -1196,6 +1271,7 @@ export function initApp(doc = globalThis.document) {
       manualSlotsByEntry.clear();
       if (isJsonExt || (!isCsvExt && text.trim().startsWith('{'))) {
         tournament = deserializeTournament(text);
+        persistAutosave();
         syncFormFromState();
         closeDialog(uploadDialog);
         await renderNow();
@@ -1203,9 +1279,11 @@ export function initApp(doc = globalThis.document) {
       } else {
         const { tournament: parsed, warnings } = parseStandingsCsv(text);
         tournament = parsed;
+        persistAutosave();
         syncFormFromState();
         closeDialog(uploadDialog);
         await resolveAllTeams();
+        persistAutosave();
         await renderNow();
         if (warnings.length) renderWarningsList(warnings);
         announce(`Imported CSV with ${tournament.standings.length} players.`);
@@ -1249,6 +1327,7 @@ export function initApp(doc = globalThis.document) {
       return;
     }
     tournament = saved;
+    persistAutosave();
     await refreshDraftsDropdown();
     setStatus(`Saved draft "${tournament.draftName}".`);
     if (saveDraftBtn) {
@@ -1296,6 +1375,7 @@ export function initApp(doc = globalThis.document) {
     standingsStash = [];
     manualSlotsByEntry.clear();
     entryModes.clear();
+    clearAutosave();
     tournament = createDefaultTournament();
     syncFormFromState();
     await refreshDraftsDropdown();
@@ -1323,6 +1403,7 @@ export function initApp(doc = globalThis.document) {
       manualSlotsByEntry.clear();
       entryModes.clear();
       tournament = loaded;
+      persistAutosave();
       syncFormFromState();
       await renderNow();
       setStatus('Draft loaded.');
@@ -1335,7 +1416,7 @@ export function initApp(doc = globalThis.document) {
   syncFormFromState();
   refreshDraftsDropdown();
   renderNow();
-  resolveAllTeams().then(() => renderNow());
+  resolveAllTeams({ skipIfResolved: true }).then(() => renderNow());
 
   return { renderNow, resolveAllTeams, getTournament: () => tournament };
 }
