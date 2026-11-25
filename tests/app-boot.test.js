@@ -62,6 +62,11 @@ function createMockElement(tag, id = '') {
       children.push(child);
       return child;
     },
+    removeChild(child) {
+      const idx = children.indexOf(child);
+      if (idx !== -1) children.splice(idx, 1);
+      return child;
+    },
     append(...nodes) {
       for (const n of nodes) children.push(n);
     },
@@ -393,11 +398,13 @@ describe('Gist single-file bundle & UI controls', () => {
     assert.equal(nameInput.disabled, false);
     assert.equal(handleInput.disabled, false);
 
-    // Toggle to Manual mode -> 6 autocorrect-disabled inputs with regulation-filtered fuzzy dropdown
+    // Toggle to Manual mode -> swaps team body in-place (preserving card DOM / scroll position) with 6 autocorrect-disabled inputs
+    const firstCardNodeBefore = playersEl.children[0];
     const toggleGroup = teamWrap.children[0].children[1];
     const manualBtn = toggleGroup.children[1];
     assert.equal(manualBtn.textContent, 'Manual');
     manualBtn.dispatch('click');
+    assert.equal(playersEl.children[0], firstCardNodeBefore, 'switching team mode must not rebuild player list or reset scroll');
 
     const manualTeamWrap = playersEl.children[0].children[1].children[2];
     const manualGrid = manualTeamWrap.children[1];

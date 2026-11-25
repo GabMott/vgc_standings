@@ -561,8 +561,7 @@ export function initApp(doc = globalThis.document) {
       warnBox.textContent = (entry.warnings || []).join(' • ');
       warnBox.hidden = !(entry.warnings && entry.warnings.length);
 
-      // Team entry section with toggle between URL/Paste and 6-slot Manual Entry
-      const mode = entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste';
+      // Team entry section with in-place toggle between URL/Paste and 6-slot Manual Entry
       const teamWrap = doc.createElement('div');
       teamWrap.className = 'mini-field span-2';
 
@@ -580,46 +579,29 @@ export function initApp(doc = globalThis.document) {
       pasteBtn.type = 'button';
       pasteBtn.textContent = 'URL / Paste';
       pasteBtn.setAttribute('role', 'tab');
-      pasteBtn.setAttribute('aria-selected', mode === 'paste' ? 'true' : 'false');
-      if (mode === 'paste') pasteBtn.classList.add('active');
-      pasteBtn.addEventListener('click', () => {
-        if (entryModes.get(entry.id) === 'paste') return;
-        entryModes.set(entry.id, 'paste');
-        renderPlayerList();
-      });
 
       const manualBtn = doc.createElement('button');
       manualBtn.type = 'button';
       manualBtn.textContent = 'Manual';
       manualBtn.setAttribute('role', 'tab');
-      manualBtn.setAttribute('aria-selected', mode === 'manual' ? 'true' : 'false');
-      if (mode === 'manual') manualBtn.classList.add('active');
-      manualBtn.addEventListener('click', () => {
-        if (entryModes.get(entry.id) === 'manual') return;
-        if ((!entry.pokemon || entry.pokemon.length === 0) && entry.teamSource && !isPokepasteUrl(entry.teamSource)) {
-          const parsed = parseShowdownTeam(entry.teamSource);
-          if (parsed.pokemon.length > 0) entry.pokemon = parsed.pokemon;
-        }
-        syncManualSlotsFromPokemon(entry);
-        entryModes.set(entry.id, 'manual');
-        renderPlayerList();
-      });
 
       toggleGroup.append(pasteBtn, manualBtn);
       modeBar.append(teamHeading, toggleGroup);
       teamWrap.appendChild(modeBar);
 
-      let pasteTextarea = null;
-      if (mode === 'paste') {
-        pasteTextarea = doc.createElement('textarea');
-        pasteTextarea.rows = 1;
-        pasteTextarea.placeholder = 'https://pokepast.es/... or paste Showdown text';
-        pasteTextarea.value = entry.teamSource || '';
-        pasteTextarea.setAttribute('aria-label', 'Team Source (PokéPaste URL or Showdown Paste)');
-        pasteTextarea.addEventListener('input', () => {
-          const v = pasteTextarea.value;
+      let currentTeamBody = null;
+      let currentPasteTextarea = null;
+
+      const buildPasteBody = () => {
+        const ta = doc.createElement('textarea');
+        ta.rows = 1;
+        ta.placeholder = 'https://pokepast.es/... or paste Showdown text';
+        ta.value = entry.teamSource || '';
+        ta.setAttribute('aria-label', 'Team Source (PokéPaste URL or Showdown Paste)');
+        ta.addEventListener('input', () => {
+          const v = ta.value;
           entry.teamSource = v;
-          autoSizeTextarea(pasteTextarea);
+          autoSizeTextarea(ta);
           if (!isPokepasteUrl(v) && v.trim()) {
             const parsed = parseShowdownTeam(v);
             if (parsed.pokemon.length > 0) {
@@ -630,16 +612,19 @@ export function initApp(doc = globalThis.document) {
             }
           }
         });
-        pasteTextarea.addEventListener('blur', async () => {
+        ta.addEventListener('blur', async () => {
           if (entry.teamSource && entry.teamSource.trim()) {
             await resolveEntryTeam(entry);
             manualSlotsByEntry.delete(entry.id);
-            renderPlayerList();
+            warnBox.textContent = (entry.warnings || []).join(' • ');
+            warnBox.hidden = !(entry.warnings && entry.warnings.length);
             await renderNow();
           }
         });
-        teamWrap.appendChild(pasteTextarea);
-      } else {
+        return ta;
+      };
+
+      const buildManualBody = () => {
         const slots = getManualSlotsForEntry(entry);
         const manualGrid = doc.createElement('div');
         manualGrid.className = 'manual-grid';
@@ -799,9 +784,48 @@ export function initApp(doc = globalThis.document) {
           combo.append(inp, dropdown);
           manualGrid.appendChild(combo);
         }
+        return manualGrid;
+      };
 
-        teamWrap.appendChild(manualGrid);
-      }
+      const mountTeamMode = (nextMode) => {
+        const isManual = nextMode === 'manual';
+        pasteBtn.setAttribute('aria-selected', isManual ? 'false' : 'true');
+        pasteBtn.classList.toggle('active', !isManual);
+        manualBtn.setAttribute('aria-selected', isManual ? 'true' : 'false');
+        manualBtn.classList.toggle('active', isManual);
+        if (currentTeamBody && typeof teamWrap.removeChild === 'function') {
+          teamWrap.removeChild(currentTeamBody);
+        }
+        if (isManual) {
+          currentPasteTextarea = null;
+          currentTeamBody = buildManualBody();
+          teamWrap.appendChild(currentTeamBody);
+        } else {
+          currentPasteTextarea = buildPasteBody();
+          currentTeamBody = currentPasteTextarea;
+          teamWrap.appendChild(currentTeamBody);
+          autoSizeTextarea(currentPasteTextarea);
+        }
+      };
+
+      pasteBtn.addEventListener('click', () => {
+        if ((entryModes.get(entry.id) || 'paste') === 'paste') return;
+        entryModes.set(entry.id, 'paste');
+        mountTeamMode('paste');
+      });
+
+      manualBtn.addEventListener('click', () => {
+        if (entryModes.get(entry.id) === 'manual') return;
+        if ((!entry.pokemon || entry.pokemon.length === 0) && entry.teamSource && !isPokepasteUrl(entry.teamSource)) {
+          const parsed = parseShowdownTeam(entry.teamSource);
+          if (parsed.pokemon.length > 0) entry.pokemon = parsed.pokemon;
+        }
+        syncManualSlotsFromPokemon(entry);
+        entryModes.set(entry.id, 'manual');
+        mountTeamMode('manual');
+      });
+
+      mountTeamMode(entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste');
 
       // Redaction toggles (name -> "Trainer" & disable name/handle fields, team -> Pokéball sprites)
       const redactBar = doc.createElement('div');
@@ -841,7 +865,7 @@ export function initApp(doc = globalThis.document) {
       grid.append(nameField.wrap, handleField.wrap, teamWrap);
       li.append(head, grid, redactBar, warnBox);
       playersEl.appendChild(li);
-      if (pasteTextarea) autoSizeTextarea(pasteTextarea);
+      if (currentPasteTextarea) autoSizeTextarea(currentPasteTextarea);
     });
   }
 

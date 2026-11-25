@@ -73,6 +73,8 @@ for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) {
   entries[`Florges-${color}`] = 'florges';
 }
 entries['Floette-Eternal'] = 'floette-eternal';
+entries['Floette-Mega'] = 'floette-mega';
+entries['Floette-Eternal-Mega'] = 'floette-mega';
 for (const trim of ['Heart', 'Star', 'Diamond', 'Debutante', 'Matron', 'Dandy', 'La Reine', 'Kabuki', 'Pharaoh']) {
   entries[`Furfrou-${trim}`] = 'furfrou';
 }
@@ -369,6 +371,7 @@ export function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
   const qNorm = lookupKey(typeof query === 'string' ? query : '').replace(/[-_.'’:\s]+/g, ' ').trim();
   const qCompact = qNorm.replace(/\s+/g, '');
   if (!qCompact || !Array.isArray(catalog) || catalog.length === 0) return [];
+  const qTokens = qNorm.split(' ').filter(Boolean);
 
   const maxResults = Math.max(1, Math.min(20, Math.floor(Number(limit) || 6)));
   const scored = [];
@@ -385,6 +388,10 @@ export function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
       score = 1000;
     } else if (norm.startsWith(qNorm) || compact.startsWith(qCompact)) {
       score = 820 - lenPenalty;
+    } else if (qTokens.length >= 2 && qTokens.every((qt) => tokens.some((t) => t.startsWith(qt)))) {
+      // Order-independent multi-token match (e.g. "mega floette" -> "Floette-Mega", "hisui arcanine" -> "Arcanine-Hisui")
+      const exactMatches = qTokens.filter((qt) => tokens.includes(qt)).length;
+      score = 720 + exactMatches * 20 - lenPenalty;
     } else if (tokens.some((t) => t.startsWith(qCompact))) {
       score = 680 - lenPenalty;
     } else {

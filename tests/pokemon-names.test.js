@@ -173,6 +173,8 @@ describe('buildPokemonCatalog / fuzzySearchPokemon', () => {
     assert.equal(fuzzySearchPokemon('inci', catalog)[0].slug, 'incineroar');
     assert.equal(fuzzySearchPokemon('mane', catalog)[0].slug, 'flutter-mane');
     assert.equal(fuzzySearchPokemon('eternal', catalog)[0].slug, 'floette-eternal');
+    assert.equal(fuzzySearchPokemon('mega floette', catalog)[0].slug, 'floette-mega');
+    assert.equal(fuzzySearchPokemon('floette-mega', catalog)[0].slug, 'floette-mega');
     assert.equal(fuzzySearchPokemon('incnr', catalog)[0].slug, 'incineroar');
     assert.equal(fuzzySearchPokemon('frgrf', catalog)[0].slug, 'farigiraf');
     assert.equal(fuzzySearchPokemon('incen', catalog)[0].slug, 'incineroar');
@@ -192,7 +194,8 @@ describe('buildPokemonCatalog / fuzzySearchPokemon', () => {
 
   test('filters catalog by regulation (M-A, M-B, M-C, M-D) and allows all for Other', () => {
     const full = buildPokemonCatalog([
-      'incineroar', 'blaziken', 'rillaboom', 'baxcalibur', 'miraidon', 'calyrex-shadow', 'floette-eternal',
+      'incineroar', 'blaziken', 'rillaboom', 'baxcalibur', 'miraidon', 'calyrex-shadow',
+      'floette-eternal', 'floette-mega', 'meowstic-female', 'meowstic-male-mega', 'meowstic-female-mega',
     ]);
     assert.equal(getRegulationLegalSet('Other'), null);
     assert.equal(getRegulationLegalSet(''), null);
@@ -201,6 +204,10 @@ describe('buildPokemonCatalog / fuzzySearchPokemon', () => {
 
     const maSlugs = new Set(filterCatalogByRegulation(full, 'M-A').map((c) => c.slug));
     assert.equal(maSlugs.has('incineroar'), true);
+    assert.equal(maSlugs.has('floette-mega'), true);
+    assert.equal(maSlugs.has('meowstic-female'), true);
+    assert.equal(maSlugs.has('meowstic-male-mega'), true);
+    assert.equal(maSlugs.has('meowstic-female-mega'), true);
     assert.equal(maSlugs.has('blaziken'), false);
     assert.equal(maSlugs.has('rillaboom'), false);
     assert.equal(maSlugs.has('miraidon'), false);

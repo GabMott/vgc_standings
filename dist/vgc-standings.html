@@ -674,6 +674,8 @@ for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) {
   entries[`Florges-${color}`] = 'florges';
 }
 entries['Floette-Eternal'] = 'floette-eternal';
+entries['Floette-Mega'] = 'floette-mega';
+entries['Floette-Eternal-Mega'] = 'floette-mega';
 for (const trim of ['Heart', 'Star', 'Diamond', 'Debutante', 'Matron', 'Dandy', 'La Reine', 'Kabuki', 'Pharaoh']) {
   entries[`Furfrou-${trim}`] = 'furfrou';
 }
@@ -968,6 +970,7 @@ function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
   const qNorm = lookupKey(typeof query === 'string' ? query : '').replace(/[-_.'’:\s]+/g, ' ').trim();
   const qCompact = qNorm.replace(/\s+/g, '');
   if (!qCompact || !Array.isArray(catalog) || catalog.length === 0) return [];
+  const qTokens = qNorm.split(' ').filter(Boolean);
 
   const maxResults = Math.max(1, Math.min(20, Math.floor(Number(limit) || 6)));
   const scored = [];
@@ -984,6 +987,10 @@ function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
       score = 1000;
     } else if (norm.startsWith(qNorm) || compact.startsWith(qCompact)) {
       score = 820 - lenPenalty;
+    } else if (qTokens.length >= 2 && qTokens.every((qt) => tokens.some((t) => t.startsWith(qt)))) {
+      // Order-independent multi-token match (e.g. "mega floette" -> "Floette-Mega", "hisui arcanine" -> "Arcanine-Hisui")
+      const exactMatches = qTokens.filter((qt) => tokens.includes(qt)).length;
+      score = 720 + exactMatches * 20 - lenPenalty;
     } else if (tokens.some((t) => t.startsWith(qCompact))) {
       score = 680 - lenPenalty;
     } else {
@@ -1024,7 +1031,7 @@ function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
 // Legal Pokémon slug sets per Pokémon Champions VGC Regulation (sourced from Showdown/Serebii).
 // M-D mirrors M-C until officially announced.
 
-const REG_MA_SLUGS = Object.freeze(["abomasnow","abomasnow-mega","absol","absol-mega","aegislash-shield","aerodactyl","aerodactyl-mega","aggron","aggron-mega","alakazam","alakazam-mega","alcremie","altaria","altaria-mega","ampharos","ampharos-mega","appletun","araquanid","arbok","arcanine","arcanine-hisui","archaludon","ariados","armarouge","aromatisse","audino","audino-mega","aurorus","avalugg","avalugg-hisui","azumarill","banette","banette-mega","basculegion-female","basculegion-male","bastiodon","beartic","beedrill","beedrill-mega","bellibolt","blastoise","blastoise-mega","camerupt","camerupt-mega","castform","ceruledge","chandelure","chandelure-mega","charizard","charizard-mega-x","charizard-mega-y","chesnaught","chesnaught-mega","chimecho","chimecho-mega","clawitzer","clefable","clefable-mega","cofagrigus","conkeldurr","corviknight","crabominable","crabominable-mega","decidueye","decidueye-hisui","dedenne","delphox","delphox-mega","diggersby","ditto","dragapult","dragonite","dragonite-mega","drampa","drampa-mega","emboar","emboar-mega","emolga","empoleon","espathra","espeon","excadrill","excadrill-mega","farigiraf","feraligatr","feraligatr-mega","flapple","flareon","floette-eternal","florges","forretress","froslass","froslass-mega","furfrou","gallade","gallade-mega","garbodor","garchomp","garchomp-mega","gardevoir","gardevoir-mega","garganacl","gengar","gengar-mega","glaceon","glalie","glalie-mega","glimmora","glimmora-mega","gliscor","golurk","golurk-mega","goodra","goodra-hisui","gourgeist-average","gourgeist-large","gourgeist-small","gourgeist-super","greninja","greninja-mega","gyarados","gyarados-mega","hatterene","hawlucha","hawlucha-mega","heliolisk","heracross","heracross-mega","hippowdon","houndoom","houndoom-mega","hydrapple","hydreigon","incineroar","infernape","jolteon","kangaskhan","kangaskhan-mega","kingambit","kleavor","klefki","kommo-o","krookodile","leafeon","liepard","lopunny","lopunny-mega","lucario","lucario-mega","luxray","lycanroc-dusk","lycanroc-midday","lycanroc-midnight","machamp","mamoswine","manectric","manectric-mega","maushold-family-of-three","medicham","medicham-mega","meganium","meganium-mega","meowscarada","meowstic-male","milotic","mimikyu-disguised","morpeko-full-belly","mr-rime","mudsdale","ninetales","ninetales-alola","noivern","oranguru","orthworm","palafin-hero","pangoro","passimian","pelipper","pidgeot","pidgeot-mega","pikachu","pinsir","pinsir-mega","politoed","polteageist","primarina","quaquaval","raichu","raichu-alola","rampardos","reuniclus","rhyperior","roserade","rotom","rotom-fan","rotom-frost","rotom-heat","rotom-mow","rotom-wash","runerigus","sableye","sableye-mega","salazzle","samurott","samurott-hisui","sandaconda","scizor","scizor-mega","scovillain","scovillain-mega","serperior","sharpedo","sharpedo-mega","simipour","simisage","simisear","sinistcha","skarmory","skarmory-mega","skeledirge","slowbro","slowbro-galar","slowbro-mega","slowking","slowking-galar","slurpuff","sneasler","snorlax","spiritomb","starmie","starmie-mega","steelix","steelix-mega","stunfisk","stunfisk-galar","sylveon","talonflame","tauros","tauros-paldea-aqua-breed","tauros-paldea-blaze-breed","tauros-paldea-combat-breed","tinkaton","torkoal","torterra","toucannon","toxapex","toxicroak","trevenant","tsareena","typhlosion","typhlosion-hisui","tyranitar","tyranitar-mega","tyrantrum","umbreon","vanilluxe","vaporeon","venusaur","venusaur-mega","victreebel","victreebel-mega","vivillon","volcarona","watchog","weavile","whimsicott","wyrdeer","zoroark","zoroark-hisui"]);
+const REG_MA_SLUGS = Object.freeze(["abomasnow","abomasnow-mega","absol","absol-mega","aegislash-shield","aerodactyl","aerodactyl-mega","aggron","aggron-mega","alakazam","alakazam-mega","alcremie","altaria","altaria-mega","ampharos","ampharos-mega","appletun","araquanid","arbok","arcanine","arcanine-hisui","archaludon","ariados","armarouge","aromatisse","audino","audino-mega","aurorus","avalugg","avalugg-hisui","azumarill","banette","banette-mega","basculegion-female","basculegion-male","bastiodon","beartic","beedrill","beedrill-mega","bellibolt","blastoise","blastoise-mega","camerupt","camerupt-mega","castform","ceruledge","chandelure","chandelure-mega","charizard","charizard-mega-x","charizard-mega-y","chesnaught","chesnaught-mega","chimecho","chimecho-mega","clawitzer","clefable","clefable-mega","cofagrigus","conkeldurr","corviknight","crabominable","crabominable-mega","decidueye","decidueye-hisui","dedenne","delphox","delphox-mega","diggersby","ditto","dragapult","dragonite","dragonite-mega","drampa","drampa-mega","emboar","emboar-mega","emolga","empoleon","espathra","espeon","excadrill","excadrill-mega","farigiraf","feraligatr","feraligatr-mega","flapple","flareon","floette-eternal","floette-mega","florges","forretress","froslass","froslass-mega","furfrou","gallade","gallade-mega","garbodor","garchomp","garchomp-mega","gardevoir","gardevoir-mega","garganacl","gengar","gengar-mega","glaceon","glalie","glalie-mega","glimmora","glimmora-mega","gliscor","golurk","golurk-mega","goodra","goodra-hisui","gourgeist-average","gourgeist-large","gourgeist-small","gourgeist-super","greninja","greninja-mega","gyarados","gyarados-mega","hatterene","hawlucha","hawlucha-mega","heliolisk","heracross","heracross-mega","hippowdon","houndoom","houndoom-mega","hydrapple","hydreigon","incineroar","infernape","jolteon","kangaskhan","kangaskhan-mega","kingambit","kleavor","klefki","kommo-o","krookodile","leafeon","liepard","lopunny","lopunny-mega","lucario","lucario-mega","luxray","lycanroc-dusk","lycanroc-midday","lycanroc-midnight","machamp","mamoswine","manectric","manectric-mega","maushold-family-of-three","medicham","medicham-mega","meganium","meganium-mega","meowscarada","meowstic-female","meowstic-female-mega","meowstic-male","meowstic-male-mega","milotic","mimikyu-disguised","morpeko-full-belly","mr-rime","mudsdale","ninetales","ninetales-alola","noivern","oranguru","orthworm","palafin-hero","pangoro","passimian","pelipper","pidgeot","pidgeot-mega","pikachu","pinsir","pinsir-mega","politoed","polteageist","primarina","quaquaval","raichu","raichu-alola","rampardos","reuniclus","rhyperior","roserade","rotom","rotom-fan","rotom-frost","rotom-heat","rotom-mow","rotom-wash","runerigus","sableye","sableye-mega","salazzle","samurott","samurott-hisui","sandaconda","scizor","scizor-mega","scovillain","scovillain-mega","serperior","sharpedo","sharpedo-mega","simipour","simisage","simisear","sinistcha","skarmory","skarmory-mega","skeledirge","slowbro","slowbro-galar","slowbro-mega","slowking","slowking-galar","slurpuff","sneasler","snorlax","spiritomb","starmie","starmie-mega","steelix","steelix-mega","stunfisk","stunfisk-galar","sylveon","talonflame","tauros","tauros-paldea-aqua-breed","tauros-paldea-blaze-breed","tauros-paldea-combat-breed","tinkaton","torkoal","torterra","toucannon","toxapex","toxicroak","trevenant","tsareena","typhlosion","typhlosion-hisui","tyranitar","tyranitar-mega","tyrantrum","umbreon","vanilluxe","vaporeon","venusaur","venusaur-mega","victreebel","victreebel-mega","vivillon","volcarona","watchog","weavile","whimsicott","wyrdeer","zoroark","zoroark-hisui"]);
 const REG_MB_ADDED = Object.freeze(["annihilape","barbaracle","barbaracle-mega","blaziken","blaziken-mega","dragalge","dragalge-mega","eelektross","eelektross-mega","falinks","falinks-mega","gholdengo","grimmsnarl","houndstone","malamar","malamar-mega","mawile","mawile-mega","metagross","metagross-mega","musharna","overqwil","pyroar-male","pyroar-mega","qwilfish","raichu-mega-x","raichu-mega-y","sceptile","sceptile-mega","scolipede","scolipede-mega","scrafty","scrafty-mega","staraptor","staraptor-mega","swampert","swampert-mega","vileplume"]);
 const REG_MC_ADDED = Object.freeze(["absol-mega-z","arboliva","baxcalibur","baxcalibur-mega","cinderace","farfetchd","garchomp-mega-z","gogoat","golisopod","golisopod-mega","grapploct","indeedee-female","indeedee-male","inteleon","lucario-mega-z","mabosstiff","mr-mime","pawmot","perrserker","persian","persian-alola","pincurchin","rillaboom","salamence","salamence-mega","sirfetchd","squawkabilly-blue-plumage","squawkabilly-green-plumage","squawkabilly-white-plumage","squawkabilly-yellow-plumage","swalot","thievul","toxtricity-amped","toxtricity-low-key","wigglytuff"]);
 
@@ -3923,8 +3930,7 @@ function initApp(doc = globalThis.document) {
       warnBox.textContent = (entry.warnings || []).join(' • ');
       warnBox.hidden = !(entry.warnings && entry.warnings.length);
 
-      // Team entry section with toggle between URL/Paste and 6-slot Manual Entry
-      const mode = entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste';
+      // Team entry section with in-place toggle between URL/Paste and 6-slot Manual Entry
       const teamWrap = doc.createElement('div');
       teamWrap.className = 'mini-field span-2';
 
@@ -3942,46 +3948,29 @@ function initApp(doc = globalThis.document) {
       pasteBtn.type = 'button';
       pasteBtn.textContent = 'URL / Paste';
       pasteBtn.setAttribute('role', 'tab');
-      pasteBtn.setAttribute('aria-selected', mode === 'paste' ? 'true' : 'false');
-      if (mode === 'paste') pasteBtn.classList.add('active');
-      pasteBtn.addEventListener('click', () => {
-        if (entryModes.get(entry.id) === 'paste') return;
-        entryModes.set(entry.id, 'paste');
-        renderPlayerList();
-      });
 
       const manualBtn = doc.createElement('button');
       manualBtn.type = 'button';
       manualBtn.textContent = 'Manual';
       manualBtn.setAttribute('role', 'tab');
-      manualBtn.setAttribute('aria-selected', mode === 'manual' ? 'true' : 'false');
-      if (mode === 'manual') manualBtn.classList.add('active');
-      manualBtn.addEventListener('click', () => {
-        if (entryModes.get(entry.id) === 'manual') return;
-        if ((!entry.pokemon || entry.pokemon.length === 0) && entry.teamSource && !isPokepasteUrl(entry.teamSource)) {
-          const parsed = parseShowdownTeam(entry.teamSource);
-          if (parsed.pokemon.length > 0) entry.pokemon = parsed.pokemon;
-        }
-        syncManualSlotsFromPokemon(entry);
-        entryModes.set(entry.id, 'manual');
-        renderPlayerList();
-      });
 
       toggleGroup.append(pasteBtn, manualBtn);
       modeBar.append(teamHeading, toggleGroup);
       teamWrap.appendChild(modeBar);
 
-      let pasteTextarea = null;
-      if (mode === 'paste') {
-        pasteTextarea = doc.createElement('textarea');
-        pasteTextarea.rows = 1;
-        pasteTextarea.placeholder = 'https://pokepast.es/... or paste Showdown text';
-        pasteTextarea.value = entry.teamSource || '';
-        pasteTextarea.setAttribute('aria-label', 'Team Source (PokéPaste URL or Showdown Paste)');
-        pasteTextarea.addEventListener('input', () => {
-          const v = pasteTextarea.value;
+      let currentTeamBody = null;
+      let currentPasteTextarea = null;
+
+      const buildPasteBody = () => {
+        const ta = doc.createElement('textarea');
+        ta.rows = 1;
+        ta.placeholder = 'https://pokepast.es/... or paste Showdown text';
+        ta.value = entry.teamSource || '';
+        ta.setAttribute('aria-label', 'Team Source (PokéPaste URL or Showdown Paste)');
+        ta.addEventListener('input', () => {
+          const v = ta.value;
           entry.teamSource = v;
-          autoSizeTextarea(pasteTextarea);
+          autoSizeTextarea(ta);
           if (!isPokepasteUrl(v) && v.trim()) {
             const parsed = parseShowdownTeam(v);
             if (parsed.pokemon.length > 0) {
@@ -3992,16 +3981,19 @@ function initApp(doc = globalThis.document) {
             }
           }
         });
-        pasteTextarea.addEventListener('blur', async () => {
+        ta.addEventListener('blur', async () => {
           if (entry.teamSource && entry.teamSource.trim()) {
             await resolveEntryTeam(entry);
             manualSlotsByEntry.delete(entry.id);
-            renderPlayerList();
+            warnBox.textContent = (entry.warnings || []).join(' • ');
+            warnBox.hidden = !(entry.warnings && entry.warnings.length);
             await renderNow();
           }
         });
-        teamWrap.appendChild(pasteTextarea);
-      } else {
+        return ta;
+      };
+
+      const buildManualBody = () => {
         const slots = getManualSlotsForEntry(entry);
         const manualGrid = doc.createElement('div');
         manualGrid.className = 'manual-grid';
@@ -4161,9 +4153,48 @@ function initApp(doc = globalThis.document) {
           combo.append(inp, dropdown);
           manualGrid.appendChild(combo);
         }
+        return manualGrid;
+      };
 
-        teamWrap.appendChild(manualGrid);
-      }
+      const mountTeamMode = (nextMode) => {
+        const isManual = nextMode === 'manual';
+        pasteBtn.setAttribute('aria-selected', isManual ? 'false' : 'true');
+        pasteBtn.classList.toggle('active', !isManual);
+        manualBtn.setAttribute('aria-selected', isManual ? 'true' : 'false');
+        manualBtn.classList.toggle('active', isManual);
+        if (currentTeamBody && typeof teamWrap.removeChild === 'function') {
+          teamWrap.removeChild(currentTeamBody);
+        }
+        if (isManual) {
+          currentPasteTextarea = null;
+          currentTeamBody = buildManualBody();
+          teamWrap.appendChild(currentTeamBody);
+        } else {
+          currentPasteTextarea = buildPasteBody();
+          currentTeamBody = currentPasteTextarea;
+          teamWrap.appendChild(currentTeamBody);
+          autoSizeTextarea(currentPasteTextarea);
+        }
+      };
+
+      pasteBtn.addEventListener('click', () => {
+        if ((entryModes.get(entry.id) || 'paste') === 'paste') return;
+        entryModes.set(entry.id, 'paste');
+        mountTeamMode('paste');
+      });
+
+      manualBtn.addEventListener('click', () => {
+        if (entryModes.get(entry.id) === 'manual') return;
+        if ((!entry.pokemon || entry.pokemon.length === 0) && entry.teamSource && !isPokepasteUrl(entry.teamSource)) {
+          const parsed = parseShowdownTeam(entry.teamSource);
+          if (parsed.pokemon.length > 0) entry.pokemon = parsed.pokemon;
+        }
+        syncManualSlotsFromPokemon(entry);
+        entryModes.set(entry.id, 'manual');
+        mountTeamMode('manual');
+      });
+
+      mountTeamMode(entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste');
 
       // Redaction toggles (name -> "Trainer" & disable name/handle fields, team -> Pokéball sprites)
       const redactBar = doc.createElement('div');
@@ -4203,7 +4234,7 @@ function initApp(doc = globalThis.document) {
       grid.append(nameField.wrap, handleField.wrap, teamWrap);
       li.append(head, grid, redactBar, warnBox);
       playersEl.appendChild(li);
-      if (pasteTextarea) autoSizeTextarea(pasteTextarea);
+      if (currentPasteTextarea) autoSizeTextarea(currentPasteTextarea);
     });
   }
 
