@@ -787,6 +787,21 @@ export function initApp(doc = globalThis.document) {
         return manualGrid;
       };
 
+      const applyTeamRedactionState = () => {
+        const redacted = Boolean(entry.redactTeam);
+        pasteBtn.disabled = redacted;
+        manualBtn.disabled = redacted;
+        if (currentPasteTextarea) {
+          currentPasteTextarea.disabled = redacted;
+        } else if (currentTeamBody && Array.isArray(currentTeamBody.children)) {
+          for (const combo of currentTeamBody.children) {
+            const inp = combo?.children?.[0];
+            if (inp) inp.disabled = redacted;
+          }
+        }
+        warnBox.hidden = redacted || !(entry.warnings && entry.warnings.length);
+      };
+
       const mountTeamMode = (nextMode) => {
         const isManual = nextMode === 'manual';
         pasteBtn.setAttribute('aria-selected', isManual ? 'false' : 'true');
@@ -806,6 +821,7 @@ export function initApp(doc = globalThis.document) {
           teamWrap.appendChild(currentTeamBody);
           autoSizeTextarea(currentPasteTextarea);
         }
+        applyTeamRedactionState();
       };
 
       pasteBtn.addEventListener('click', () => {
@@ -827,7 +843,7 @@ export function initApp(doc = globalThis.document) {
 
       mountTeamMode(entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste');
 
-      // Redaction toggles (name -> "Trainer" & disable name/handle fields, team -> Pokéball sprites)
+      // Redaction toggles at the top of the player card (name -> "Trainer", team -> 6 Pokéball sprites)
       const redactBar = doc.createElement('div');
       redactBar.className = 'redact-toggles';
 
@@ -858,18 +874,23 @@ export function initApp(doc = globalThis.document) {
       });
       const redactTeamToggle = makeToggle('Redact team', entry.redactTeam, (checked) => {
         entry.redactTeam = checked;
+        applyTeamRedactionState();
         renderNow();
       });
       redactBar.append(redactNameToggle, redactTeamToggle);
 
       grid.append(nameField.wrap, handleField.wrap, teamWrap);
-      li.append(head, grid, redactBar, warnBox);
+      li.append(head, redactBar, grid, warnBox);
       playersEl.appendChild(li);
       if (currentPasteTextarea) autoSizeTextarea(currentPasteTextarea);
     });
   }
 
   async function resolveEntryTeam(entry) {
+    if (entry.redactTeam === true) {
+      entry.warnings = [];
+      return;
+    }
     const src = (entry.teamSource || '').trim();
     if (!src) {
       entry.pokemon = [];

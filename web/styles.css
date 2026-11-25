@@ -165,7 +165,7 @@ textarea {
 .poke-suggest li:hover, .poke-suggest li.active {
   background: var(--brand); color: #fff;
 }
-.redact-toggles { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .55rem; padding-top: .45rem; border-top: 1px solid var(--border); }
+.redact-toggles { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin: 0 0 .6rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
 .redact-toggle {
   display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-label);
   color: var(--muted); cursor: pointer; -webkit-user-select: none; user-select: none;

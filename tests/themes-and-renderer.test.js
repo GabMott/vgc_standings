@@ -141,9 +141,9 @@ describe('canvas-renderer', () => {
     assert.ok(!texts.includes('@secret'));
     const drawnImgs = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'drawImage').map((c) => c[1]);
     assert.equal(drawnImgs.filter((img) => img === realSprite).length, 0);
-    // Each Pokéball filler sprite draws circular arcs (6 arc calls per Pokéball)
+    // Redacted team always renders a full row of 6 Pokéball filler sprites (6 arc calls per Pokéball)
     const arcCalls = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'arc');
-    assert.equal(arcCalls.length, 12);
+    assert.equal(arcCalls.length, 36);
   });
 
   it('draws original and fork GitHub watermarks in the bottom-left and omits the signature pill', () => {

@@ -175,13 +175,13 @@ export function validateTournament(tournament) {
       if (typeof entry.id !== 'string' || !entry.id) errors.push(`${label}.id is required.`);
       else if (ids.has(entry.id)) errors.push(`${label}.id "${entry.id}" is duplicated.`);
       else ids.add(entry.id);
-      if (!sanitizeText(entry.name)) warnings.push(`${label} has no player name.`);
+      if (entry.redactName !== true && !sanitizeText(entry.name)) warnings.push(`${label} has no player name.`);
       if (parsePlacingRank(entry.placing) === null) warnings.push(`${label} has an unparseable placing.`);
       else if (placings.has(entry.placing)) warnings.push(`Duplicate placing "${entry.placing}".`);
       else placings.add(entry.placing);
       if (!Array.isArray(entry.pokemon)) errors.push(`${label}.pokemon must be an array.`);
       else {
-        if (entry.pokemon.length === 0) warnings.push(`${label} has no Pokémon.`);
+        if (entry.redactTeam !== true && entry.pokemon.length === 0) warnings.push(`${label} has no Pokémon.`);
         if (entry.pokemon.length > 6) errors.push(`${label} has more than 6 Pokémon.`);
       }
       if (entry.warnings !== undefined && !Array.isArray(entry.warnings)) errors.push(`${label}.warnings must be an array.`);

@@ -561,8 +561,7 @@ function cardDividerOffset(cardHeight) {
 function resolveCardSprites(entry, assets) {
   const mons = Array.isArray(entry.pokemon) ? entry.pokemon : [];
   if (entry.redactTeam === true) {
-    const count = mons.length > 0 ? Math.min(6, mons.length) : 6;
-    return Array.from({ length: count }, () => ({
+    return Array.from({ length: 6 }, () => ({
       mon: { name: 'Poké Ball', speciesSlug: 'poke-ball' },
       img: null,
       tight: null,

@@ -358,8 +358,18 @@ describe('Gist single-file bundle & UI controls', () => {
     topCutSelect.dispatch('change');
     assert.equal(playersEl.children.length, 2);
 
+    // Redaction toggles sit at the top of each player card (right below header, above inputs); no Pokémon chips list
+    const firstCardChildren = playersEl.children[0].children;
+    assert.ok(!firstCardChildren.some((el) => el.className === 'chips'), 'chips list should be removed');
+    const redactBar = firstCardChildren[1];
+    assert.equal(redactBar.className, 'redact-toggles');
+    assert.equal(redactBar.children.length, 2);
+    assert.equal(redactBar.children[0].children[1].textContent, 'Redact name');
+    assert.equal(redactBar.children[1].children[1].textContent, 'Redact team');
+
     // Player cards contain only Player Name, Handle, and Team (with URL/Paste & Manual toggle)
-    const firstCardGrid = playersEl.children[0].children[1];
+    const firstCardGrid = firstCardChildren[2];
+    assert.equal(firstCardGrid.className, 'player-grid');
     const fieldLabels = firstCardGrid.children.map((el) => el.children[0].textContent || el.children[0].children?.[0]?.textContent);
     assert.deepEqual(fieldLabels, ['Player Name', 'Handle', 'Team']);
 
@@ -375,18 +385,11 @@ describe('Gist single-file bundle & UI controls', () => {
     const urlHeight = Number.parseInt(teamTextarea.style.height, 10);
     assert.ok(urlHeight < multiLineHeight && urlHeight <= 60, `expected compact URL height, got ${urlHeight}`);
 
-    // No Pokémon chips list at bottom of player cards; redaction toggles present
-    const firstCardChildren = playersEl.children[0].children;
-    assert.ok(!firstCardChildren.some((el) => el.className === 'chips'), 'chips list should be removed');
-    const redactBar = firstCardChildren.find((el) => el.className === 'redact-toggles');
-    assert.ok(redactBar && redactBar.children.length === 2);
-    assert.equal(redactBar.children[0].children[1].textContent, 'Redact name');
-    assert.equal(redactBar.children[1].children[1].textContent, 'Redact team');
-
-    // Toggling Redact name disables both Player Name and Handle inputs as a safety precaution
+    // Toggling Redact name disables Player Name & Handle; toggling Redact team disables Team controls
     const nameInput = firstCardGrid.children[0].children[1];
     const handleInput = firstCardGrid.children[1].children[1];
     const redactNameCheckbox = redactBar.children[0].children[0];
+    const redactTeamCheckbox = redactBar.children[1].children[0];
     assert.equal(nameInput.disabled, false);
     assert.equal(handleInput.disabled, false);
     redactNameCheckbox.checked = true;
@@ -398,6 +401,14 @@ describe('Gist single-file bundle & UI controls', () => {
     assert.equal(nameInput.disabled, false);
     assert.equal(handleInput.disabled, false);
 
+    assert.equal(teamTextarea.disabled, false);
+    redactTeamCheckbox.checked = true;
+    redactTeamCheckbox.dispatch('change');
+    assert.equal(teamTextarea.disabled, true);
+    redactTeamCheckbox.checked = false;
+    redactTeamCheckbox.dispatch('change');
+    assert.equal(teamTextarea.disabled, false);
+
     // Toggle to Manual mode -> swaps team body in-place (preserving card DOM / scroll position) with 6 autocorrect-disabled inputs
     const firstCardNodeBefore = playersEl.children[0];
     const toggleGroup = teamWrap.children[0].children[1];
@@ -406,7 +417,7 @@ describe('Gist single-file bundle & UI controls', () => {
     manualBtn.dispatch('click');
     assert.equal(playersEl.children[0], firstCardNodeBefore, 'switching team mode must not rebuild player list or reset scroll');
 
-    const manualTeamWrap = playersEl.children[0].children[1].children[2];
+    const manualTeamWrap = playersEl.children[0].children[2].children[2];
     const manualGrid = manualTeamWrap.children[1];
     assert.equal(manualGrid.children.length, 6);
     const firstCombo = manualGrid.children[0];
@@ -469,6 +480,17 @@ describe('Gist single-file bundle & UI controls', () => {
     assert.ok(missingMsgs.includes('Player #2: team is missing'));
     doc.byId.get('btn-download-warn-cancel').dispatch('click');
     assert.equal(dlWarnDlg.open, false);
+
+    // Checking Redact name & Redact team ignores missing name/team data for that player
+    redactNameCheckbox.checked = true;
+    redactNameCheckbox.dispatch('change');
+    redactTeamCheckbox.checked = true;
+    redactTeamCheckbox.dispatch('change');
+    doc.byId.get('btn-download').dispatch('click');
+    const redactedMsgs = dlWarnList.children.map((li) => li.textContent);
+    assert.ok(!redactedMsgs.some((m) => m.startsWith('Player #1:')), 'redacted player should have no missing-field warnings');
+    assert.ok(redactedMsgs.includes('Player #2: team is missing'));
+    doc.byId.get('btn-download-warn-cancel').dispatch('click');
 
     // Consolidated Upload and Export dialogs open on button click
     doc.byId.get('btn-upload').dispatch('click');
