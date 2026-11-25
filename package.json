@@ -1,0 +1,16 @@
+{
+  "name": "vgc-standings-generator",
+  "version": "2.0.0",
+  "description": "Modular, dependency-free core for the VGC Standings Generator.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage tests/*.test.js",
+    "build:gist": "node scripts/build-gist.mjs"
+  },
+  "dependencies": {}
+}

@@ -1,2 +1,7 @@
 *.png
+!assets/*.png
+!standings.png
 *.csv
+!data.csv
+node_modules/
+.DS_Store

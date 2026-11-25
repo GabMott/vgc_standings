@@ -1,0 +1,2937 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>VGC Standings Generator</title>
+  <style>
+:root {
+  color-scheme: dark;
+  accent-color: #3b82f6;
+  --bg: #0b1020;
+  --panel: #131a2e;
+  --panel-2: #1b2440;
+  --border: #2a3558;
+  --text: #e8edf8;
+  --muted: #9aa8c7;
+  --brand: #3b82f6;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@supports not (accent-color: #3b82f6) {
+  input[type="checkbox"], input[type="radio"] { outline: 1px solid var(--brand); }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.45; }
+h1, h2 { margin: 0; line-height: 1.2; }
+h1 { font-size: 1.25rem; }
+h2 { font-size: 1.05rem; margin-bottom: .5rem; }
+
+.visually-hidden {
+  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip-link { position: absolute; left: .5rem; top: -3rem; background: var(--brand); color: #fff; padding: .5rem .75rem; border-radius: .4rem; z-index: 20; }
+.skip-link:focus { top: .5rem; }
+[hidden] { display: none !important; }
+
+.app-header {
+  display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center;
+  padding: .75rem 1rem; background: var(--panel); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.toolbar.drafts label { color: var(--muted); font-size: .85rem; }
+
+button, select, input, textarea { font: inherit; color: inherit; }
+button {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: .5rem;
+  padding: .45rem .8rem; cursor: pointer;
+}
+button:hover { border-color: var(--brand); }
+button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+button.danger { color: var(--err); }
+button.small { padding: .25rem .55rem; font-size: .85rem; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%; background: #0e1527; border: 1px solid var(--border); border-radius: .5rem; padding: .5rem .6rem;
+}
+input[type="color"] { width: 3.5rem; height: 2.25rem; padding: 0; background: none; border: 1px solid var(--border); border-radius: .4rem; }
+textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+
+.workspace {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
+  padding: 1rem; max-width: 1600px; margin: 0 auto; align-items: start;
+}
+.controls { display: grid; gap: 1rem; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: .85rem; padding: 1rem; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.preview { position: sticky; top: 4.75rem; max-height: calc(100vh - 5.5rem); overflow: auto; border-radius: .85rem; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+.span-2 { grid-column: 1 / -1; }
+.field label { display: block; font-weight: 600; font-size: .9rem; }
+.field label.check { display: flex; gap: .5rem; align-items: center; }
+.hint { margin: .1rem 0 .35rem; color: var(--muted); font-size: .8rem; }
+.muted { color: var(--muted); }
+
+.error-msg { margin: .25rem 0 0; color: var(--err); font-size: .8rem; min-height: 0; }
+.error-msg:empty { display: none; }
+.error-msg::before { content: "⚠ "; }
+:is(:user-invalid, .user-invalid-fallback), [aria-invalid="true"] {
+  border-color: var(--err) !important; box-shadow: 0 0 0 1px var(--err);
+}
+:is(:user-valid):is(input[type="text"], input[type="number"], textarea) { border-color: var(--ok); }
+
+.canvas-wrap { background: #05070f; border-radius: .6rem; overflow: hidden; border: 1px solid var(--border); }
+#standings-canvas { display: block; width: 100%; height: auto; }
+.preview-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
+.status { min-height: 1.4em; font-size: .9rem; color: var(--muted); }
+.status.error { color: var(--err); }
+.status.ok { color: var(--ok); }
+.warning-list { margin: .5rem 0 0; padding: 0; list-style: none; display: grid; gap: .25rem; font-size: .82rem; }
+.warning-list li { color: var(--warn); }
+.warning-list li::before { content: "⚠ "; }
+.analytics { margin-top: .75rem; border-top: 1px solid var(--border); padding-top: .5rem; }
+.analytics summary { cursor: pointer; font-weight: 600; }
+.analytics h3 { font-size: .85rem; margin: .6rem 0 .2rem; color: var(--muted); }
+.analytics table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.analytics td { padding: .1rem .3rem; border-bottom: 1px solid var(--border); }
+.analytics td:last-child { text-align: right; width: 3rem; }
+
+.uploads { border: 1px solid var(--border); border-radius: .6rem; margin: .75rem 0 0; padding: .5rem .75rem .75rem; }
+.uploads legend { padding: 0 .4rem; font-weight: 600; font-size: .9rem; }
+.upload-list { display: grid; gap: .6rem; }
+.upload-row { display: grid; grid-template-columns: 7rem 1fr auto; gap: .5rem; align-items: center; }
+.upload-row .upload-status { grid-column: 2 / -1; font-size: .8rem; color: var(--muted); margin: 0; }
+.upload-row .upload-status.error { color: var(--err); }
+
+.players { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .75rem; }
+.player { background: var(--panel-2); border: 1px solid var(--border); border-radius: .7rem; padding: .75rem; }
+.player-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4rem; align-items: center; margin-bottom: .5rem; }
+.player-head strong { font-size: .9rem; }
+.player-actions { display: flex; flex-wrap: wrap; gap: .3rem; }
+.player-grid { display: grid; grid-template-columns: 6rem 1fr 1fr; gap: .5rem .75rem; }
+.player-grid .wide { grid-column: 1 / -1; }
+.player-grid label { font-size: .8rem; font-weight: 600; display: block; }
+.badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+.badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 999px; border: 1px solid var(--border); background: #0e1527; }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.err { color: var(--err); border-color: var(--err); }
+.badge.busy { color: #93c5fd; border-color: #93c5fd; }
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
+.chip { display: inline-flex; align-items: center; gap: .25rem; font-size: .78rem; background: #0e1527; border: 1px solid var(--border); border-radius: .5rem; padding: .1rem .45rem .1rem .15rem; }
+.chip img { width: 28px; height: 28px; object-fit: contain; }
+.chip .nosprite { width: 28px; height: 28px; display: grid; place-items: center; color: var(--muted); }
+
+@media (max-width: 960px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .preview { position: static; max-height: none; order: -1; }
+  .app-header { position: static; }
+}
+@media (max-width: 560px) {
+  .grid-2, .player-grid { grid-template-columns: minmax(0, 1fr); }
+  .upload-row { grid-template-columns: 1fr; }
+  .upload-row .upload-status { grid-column: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  button { transition: border-color .15s, background-color .15s; }
+}
+
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <p id="announcer" class="visually-hidden" aria-live="polite" role="status"></p>
+
+  <header class="app-header">
+    <h1>VGC Standings Generator</h1>
+    <div class="toolbar" role="toolbar" aria-label="File actions">
+      <button type="button" id="btn-sample">Load Sample (Masters Eight)</button>
+      <button type="button" id="btn-import-csv">Import CSV</button>
+      <button type="button" id="btn-export-csv">Export CSV</button>
+      <button type="button" id="btn-import-json">Import JSON</button>
+      <button type="button" id="btn-export-json">Export JSON</button>
+      <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+      <input type="file" id="file-json" accept=".json,application/json" hidden>
+    </div>
+    <div class="toolbar drafts" role="group" aria-labelledby="drafts-label">
+      <label id="drafts-label" for="drafts-select">Saved drafts</label>
+      <select id="drafts-select"><option value="">— none —</option></select>
+      <button type="button" id="btn-draft-save">Save</button>
+      <button type="button" id="btn-draft-new">New</button>
+      <button type="button" id="btn-draft-delete" class="danger">Delete</button>
+    </div>
+  </header>
+
+  <main id="workspace" class="workspace">
+    <div class="controls">
+      <section class="card" aria-labelledby="h-meta">
+        <h2 id="h-meta">Tournament Metadata</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-eventType">Event type</label>
+            <p class="hint" id="h-eventType">Sets the banner title.</p>
+            <select id="f-eventType" aria-describedby="h-eventType e-eventType">
+              <option value="challenge">Challenge</option>
+              <option value="cup">Cup</option>
+              <option value="local" selected>Local</option>
+              <option value="custom">Custom</option>
+            </select>
+            <p class="error-msg" id="e-eventType" data-error></p>
+          </div>
+          <div class="field" id="wrap-customLabel" hidden>
+            <label for="f-customLabel">Custom event label</label>
+            <p class="hint" id="h-customLabel">e.g. "Regional Qualifier".</p>
+            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="h-customLabel e-customLabel">
+            <p class="error-msg" id="e-customLabel" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-location">Location</label>
+            <p class="hint" id="h-location">City, venue or store name.</p>
+            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="h-location e-location">
+            <p class="error-msg" id="e-location" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-date">Date</label>
+            <p class="hint" id="h-date">Free text, e.g. "July 8th".</p>
+            <input id="f-date" type="text" maxlength="40" autocomplete="off" aria-describedby="h-date e-date">
+            <p class="error-msg" id="e-date" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-regulation">Regulation</label>
+            <p class="hint" id="h-regulation">e.g. "M-8" or "G".</p>
+            <input id="f-regulation" type="text" maxlength="20" autocomplete="off" aria-describedby="h-regulation e-regulation">
+            <p class="error-msg" id="e-regulation" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-playerCount">Player count</label>
+            <p class="hint" id="h-playerCount">Total attendees (0–9999). 0 hides it.</p>
+            <input id="f-playerCount" type="number" min="0" max="9999" step="1" inputmode="numeric" aria-describedby="h-playerCount e-playerCount">
+            <p class="error-msg" id="e-playerCount" data-error></p>
+          </div>
+          <div class="field span-2">
+            <label for="f-signature">Signature text</label>
+            <p class="hint" id="h-signature">Shown at the bottom of the image. Leave blank to hide.</p>
+            <input id="f-signature" type="text" maxlength="80" autocomplete="off" aria-describedby="h-signature e-signature">
+            <p class="error-msg" id="e-signature" data-error></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-theme">
+        <h2 id="h-theme">Theme &amp; Assets</h2>
+        <div class="grid-2">
+          <div class="field span-2">
+            <label for="f-theme">Theme</label>
+            <p class="hint" id="h-theme-hint">Three Portland VGC themes and four procedural ones.</p>
+            <select id="f-theme" aria-describedby="h-theme-hint"></select>
+          </div>
+          <div class="field span-2">
+            <label class="check"><input type="checkbox" id="f-customColors"> Use custom colors</label>
+            <p class="hint" id="h-colors">Color 1 drives gradients' start, Color 2 the end and accent.</p>
+          </div>
+          <div class="field">
+            <label for="f-color1">Color 1</label>
+            <input id="f-color1" type="color" value="#101a2e" aria-describedby="h-colors">
+          </div>
+          <div class="field">
+            <label for="f-color2">Color 2</label>
+            <input id="f-color2" type="color" value="#d8b45a" aria-describedby="h-colors">
+          </div>
+        </div>
+        <fieldset class="uploads">
+          <legend>Custom images (optional)</legend>
+          <p class="hint">PNG, JPEG, WebP or GIF, up to 10 MB. Images stay in your browser and are not saved with drafts.</p>
+          <div id="upload-list" class="upload-list"></div>
+        </fieldset>
+      </section>
+
+      <section class="card" aria-labelledby="h-players">
+        <div class="card-head">
+          <h2 id="h-players">Standings / Players</h2>
+          <button type="button" id="btn-add-player" class="primary">Add Player</button>
+        </div>
+        <p class="hint">Team Source accepts a pokepast.es link or pasted Showdown text.</p>
+        <ol id="players" class="players" aria-live="off"></ol>
+        <p id="players-empty" class="muted" hidden>No players yet. Add one to get started.</p>
+      </section>
+    </div>
+
+    <aside class="preview" aria-labelledby="h-preview">
+      <div class="preview-inner card">
+        <h2 id="h-preview">Live Preview</h2>
+        <div class="canvas-wrap">
+          <canvas id="standings-canvas" width="1500" height="1500" role="img" aria-label="Standings graphic preview"></canvas>
+        </div>
+        <div class="preview-actions">
+          <button type="button" id="btn-render">Render / Refresh Teams</button>
+          <button type="button" id="btn-download" class="primary">Download PNG</button>
+        </div>
+        <div id="status" class="status" role="status"></div>
+        <ul id="warnings" class="warning-list"></ul>
+        <details id="analytics" class="analytics">
+          <summary>Tournament Analytics Preview</summary>
+          <div id="analytics-body"></div>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+(() => {
+'use strict';
+
+// --- src/core/validation.js ---
+// Pure sanitization / validation helpers. No I/O, no globals besides built-ins.
+
+const CONTROL_CHARS_RE = /[\u0000-\u001F\u007F-\u009F]/g;
+// Bidi overrides/isolates (text-spoofing vectors), line/paragraph separators, BOM / ZWNBSP.
+const UNSAFE_FORMAT_RE = /[\u202A-\u202E\u2066-\u2069\u2028\u2029\uFEFF]/g;
+const MAX_PLAYER_COUNT = 9999;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 8000;
+const ALLOWED_IMAGE_TYPES = Object.freeze(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const EVENT_TYPES = Object.freeze(['challenge', 'cup', 'local', 'custom']);
+
+function toStringSafe(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'bigint') return value.toString();
+  return null;
+}
+
+/** Strips control chars, normalizes to NFC, trims and truncates by code point. */
+function sanitizeText(value, { maxLength = 100, fallback = '' } = {}) {
+  const raw = toStringSafe(value);
+  if (raw === null) return fallback;
+  let text = raw.replace(CONTROL_CHARS_RE, '').replace(UNSAFE_FORMAT_RE, '');
+  try {
+    text = text.normalize('NFC');
+  } catch {
+    // normalize never throws for strings, but stay defensive.
+  }
+  text = text.trim();
+  const limit = Number.isFinite(maxLength) && maxLength > 0 ? Math.floor(maxLength) : maxLength === Infinity ? Infinity : 100;
+  if (limit !== Infinity) {
+    const chars = Array.from(text);
+    if (chars.length > limit) text = chars.slice(0, limit).join('').trim();
+  }
+  return text === '' ? fallback : text;
+}
+
+/** Returns '@handle' (letters, digits, _ . -) or '' when nothing usable remains. */
+function sanitizeHandle(value) {
+  const text = sanitizeText(value, { maxLength: 60, fallback: '' });
+  if (!text) return '';
+  const cleaned = text
+    .replace(/^@+/, '')
+    .replace(/[^\p{L}\p{N}\p{M}_.\-]/gu, '')
+    .slice(0, 30);
+  return cleaned ? `@${cleaned}` : '';
+}
+
+/** Placing label such as "1", "1st", "T-3", "Top 8". */
+function sanitizePlacing(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(Math.trunc(value)) : '';
+  }
+  return sanitizeText(value, { maxLength: 12, fallback: '' });
+}
+
+/** Numeric rank from a placing label, or null. */
+function parsePlacingRank(placing) {
+  if (typeof placing === 'number') {
+    return Number.isSafeInteger(placing) && placing >= 1 ? placing : null;
+  }
+  if (typeof placing !== 'string') return null;
+  const match = placing.match(/\d+/);
+  if (!match) return null;
+  const rank = Number.parseInt(match[0], 10);
+  return Number.isSafeInteger(rank) && rank >= 1 ? rank : null;
+}
+
+/** Normalizes #rgb / #rrggbb / rrggbb / #rrggbbaa to uppercase #RRGGBB. */
+function normalizeHexColor(value, fallback = '#000000') {
+  const parse = (input) => {
+    if (typeof input !== 'string') return null;
+    const match = input.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (!match) return null;
+    let hex = match[1];
+    if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+    if (hex.length === 8) hex = hex.slice(0, 6);
+    return `#${hex.toUpperCase()}`;
+  };
+  return parse(value) ?? parse(fallback) ?? '#000000';
+}
+
+/** Integer in [0, MAX_PLAYER_COUNT]; invalid input yields 0. */
+function sanitizePlayerCount(value) {
+  let num;
+  if (typeof value === 'number') num = value;
+  else if (typeof value === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(value)) num = Number(value);
+  else return 0;
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.min(Math.floor(num), MAX_PLAYER_COUNT);
+}
+
+/** Allows http(s) URLs, small inline raster data URLs and (optionally) './' relative paths. */
+function sanitizeUrl(value, { allowRelative = false, allowData = false } = {}) {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  if (!text || text.length > 2048 || CONTROL_CHARS_RE.test(text)) {
+    CONTROL_CHARS_RE.lastIndex = 0;
+    return '';
+  }
+  CONTROL_CHARS_RE.lastIndex = 0;
+  if (allowData && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(text)) return text;
+  if (allowRelative && /^\.\.?\//.test(text) && !text.includes(':')) return text;
+  try {
+    const url = new URL(text);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+function validateImageFileMeta(meta) {
+  const errors = [];
+  if (meta === null || typeof meta !== 'object') {
+    return { valid: false, errors: ['Missing image metadata.'] };
+  }
+  const { type, size, width, height } = meta;
+  if (typeof type !== 'string' || !ALLOWED_IMAGE_TYPES.includes(type.toLowerCase())) {
+    errors.push(`Unsupported image type "${sanitizeText(type, { maxLength: 40, fallback: 'unknown' })}". Use PNG, JPEG, WebP or GIF.`);
+  }
+  if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) {
+    errors.push('Image file is empty or has an invalid size.');
+  } else if (size > MAX_IMAGE_BYTES) {
+    errors.push(`Image is larger than ${MAX_IMAGE_BYTES / (1024 * 1024)} MB.`);
+  }
+  for (const [label, dim] of [['width', width], ['height', height]]) {
+    if (dim === undefined) continue;
+    if (typeof dim !== 'number' || !Number.isFinite(dim) || dim <= 0) errors.push(`Image ${label} is invalid.`);
+    else if (dim > MAX_IMAGE_DIMENSION) errors.push(`Image ${label} exceeds ${MAX_IMAGE_DIMENSION}px.`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+function validateTournament(tournament) {
+  const errors = [];
+  const warnings = [];
+  if (tournament === null || typeof tournament !== 'object' || Array.isArray(tournament)) {
+    return { valid: false, errors: ['Tournament must be an object.'], warnings };
+  }
+  if (tournament.schemaVersion !== 1) errors.push(`Unsupported schemaVersion: ${String(tournament.schemaVersion)}.`);
+  if (typeof tournament.id !== 'string' || !tournament.id) errors.push('Tournament id is required.');
+
+  const event = tournament.event;
+  if (event === null || typeof event !== 'object') {
+    errors.push('Tournament event is required.');
+  } else {
+    if (!EVENT_TYPES.includes(event.eventType)) errors.push(`Invalid eventType: ${String(event.eventType)}.`);
+    if (event.eventType === 'custom' && !sanitizeText(event.customEventLabel)) {
+      warnings.push('Custom event has no label.');
+    }
+    if (!Number.isInteger(event.playerCount) || event.playerCount < 0) errors.push('event.playerCount must be a non-negative integer.');
+  }
+
+  const standings = tournament.standings;
+  if (!Array.isArray(standings)) {
+    errors.push('standings must be an array.');
+  } else {
+    if (standings.length === 0) warnings.push('Standings are empty.');
+    if (standings.length > 32) warnings.push('More than 32 standings entries; the image will be very tall.');
+    if (event && Number.isInteger(event.playerCount) && event.playerCount > 0 && standings.length > event.playerCount) {
+      warnings.push('More standings entries than players.');
+    }
+    const ids = new Set();
+    const placings = new Set();
+    standings.forEach((entry, index) => {
+      const label = `standings[${index}]`;
+      if (entry === null || typeof entry !== 'object') {
+        errors.push(`${label} must be an object.`);
+        return;
+      }
+      if (typeof entry.id !== 'string' || !entry.id) errors.push(`${label}.id is required.`);
+      else if (ids.has(entry.id)) errors.push(`${label}.id "${entry.id}" is duplicated.`);
+      else ids.add(entry.id);
+      if (!sanitizeText(entry.name)) warnings.push(`${label} has no player name.`);
+      if (parsePlacingRank(entry.placing) === null) warnings.push(`${label} has an unparseable placing.`);
+      else if (placings.has(entry.placing)) warnings.push(`Duplicate placing "${entry.placing}".`);
+      else placings.add(entry.placing);
+      if (!Array.isArray(entry.pokemon)) errors.push(`${label}.pokemon must be an array.`);
+      else {
+        if (entry.pokemon.length === 0) warnings.push(`${label} has no Pokémon.`);
+        if (entry.pokemon.length > 6) errors.push(`${label} has more than 6 Pokémon.`);
+      }
+      if (entry.warnings !== undefined && !Array.isArray(entry.warnings)) errors.push(`${label}.warnings must be an array.`);
+    });
+  }
+
+  const theme = tournament.themeConfig;
+  if (theme === null || typeof theme !== 'object') {
+    warnings.push('themeConfig missing; defaults will be used.');
+  } else if (typeof theme.themeId !== 'string' || !theme.themeId) {
+    warnings.push('themeConfig.themeId missing; default theme will be used.');
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+// --- src/core/pokemon-names.js ---
+// Showdown / PokéPaste species names -> PokeAPI slugs. Ported from generate_standings.py with typos fixed.
+
+const entries = {};
+
+function addAll(names, slug) {
+  for (const name of names) entries[name] = slug;
+}
+
+const TYPES_NO_NORMAL = ['Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel', 'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark', 'Fairy'];
+
+// Pikachu cap / costume forms
+for (const cap of ['Original', 'Partner', 'World', 'Hoenn', 'Sinnoh', 'Unova', 'Kalos', 'Alola']) {
+  entries[`Pikachu-${cap}`] = `pikachu-${cap.toLowerCase()}-cap`;
+}
+for (const breed of ['Combat', 'Blaze', 'Aqua']) {
+  entries[`Tauros-Paldea-${breed}`] = `tauros-paldea-${breed.toLowerCase()}-breed`;
+}
+entries['Mr. Mime'] = 'mr-mime';
+entries['Mr. Mime-Galar'] = 'mr-mime-galar';
+entries['Mr. Rime'] = 'mr-rime';
+entries['Mime Jr.'] = 'mime-jr';
+entries['Nidoran-F'] = 'nidoran-f';
+entries['Nidoran-M'] = 'nidoran-m';
+entries['Nidoran\u2640'] = 'nidoran-f';
+entries['Nidoran\u2642'] = 'nidoran-m';
+
+// Unown
+for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') entries[`Unown-${letter}`] = 'unown';
+addAll(['Unown-Exclamation', 'Unown-Question'], 'unown');
+
+// Gen 4
+entries['Deoxys'] = 'deoxys-normal';
+entries['Wormadam'] = 'wormadam-plant';
+entries['Cherrim-Sunshine'] = 'cherrim';
+entries['Shellos-East'] = 'shellos';
+entries['Gastrodon-East'] = 'gastrodon';
+entries['Giratina'] = 'giratina-altered';
+entries['Shaymin'] = 'shaymin-land';
+entries['Arceus-Normal'] = 'arceus';
+for (const type of TYPES_NO_NORMAL) {
+  entries[`Arceus-${type}`] = 'arceus';
+  entries[`Silvally-${type}`] = 'silvally';
+}
+entries['Silvally-Normal'] = 'silvally';
+
+// Gen 5
+entries['Darmanitan'] = 'darmanitan-standard';
+entries['Darmanitan-Galar'] = 'darmanitan-galar-standard';
+addAll(['Deerling-Winter', 'Deerling-Summer', 'Deerling-Autumn'], 'deerling');
+addAll(['Sawsbuck-Winter', 'Sawsbuck-Summer', 'Sawsbuck-Autumn'], 'sawsbuck');
+entries['Tornadus'] = 'tornadus-incarnate';
+entries['Thundurus'] = 'thundurus-incarnate';
+entries['Landorus'] = 'landorus-incarnate';
+entries['Keldeo'] = 'keldeo-ordinary';
+entries['Meloetta'] = 'meloetta-aria';
+entries['Basculin'] = 'basculin-red-striped';
+entries['Basculin-White-Striped'] = 'basculin-white-striped';
+for (const drive of ['Douse', 'Shock', 'Burn', 'Chill']) entries[`Genesect-${drive}`] = 'genesect';
+
+// Gen 6
+for (const pattern of ['Icy-Snow', 'Polar', 'Tundra', 'Continental', 'Garden', 'Elegant', 'Modern', 'Marine', 'Archipelago', 'High Plains', 'Sandstorm', 'River', 'Monsoon', 'Savanna', 'Sun', 'Ocean', 'Jungle', 'Fancy', 'Pokeball']) {
+  entries[`Vivillon-${pattern}`] = 'vivillon';
+}
+// Flabébé: both NFC (\u00e9) and NFD (e + \u0301) spellings, plus ASCII.
+const FLABEBE_NFC = 'Flab\u00e9b\u00e9';
+const FLABEBE_NFD = 'Flabe\u0301be\u0301';
+for (const base of [FLABEBE_NFC, FLABEBE_NFD, 'Flabebe']) {
+  entries[base] = 'flabebe';
+  for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) entries[`${base}-${color}`] = 'flabebe';
+}
+for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) {
+  entries[`Floette-${color}`] = 'floette';
+  entries[`Florges-${color}`] = 'florges';
+}
+for (const trim of ['Heart', 'Star', 'Diamond', 'Debutante', 'Matron', 'Dandy', 'La Reine', 'Kabuki', 'Pharaoh']) {
+  entries[`Furfrou-${trim}`] = 'furfrou';
+}
+entries['Meowstic'] = 'meowstic-male';
+entries['Meowstic-M'] = 'meowstic-male';
+entries['Meowstic-F'] = 'meowstic-female';
+entries['Meowstic-M-Mega'] = 'meowstic-male-mega';
+entries['Meowstic-F-Mega'] = 'meowstic-female-mega';
+entries['Aegislash'] = 'aegislash-shield';
+entries['Aegislash-Shield'] = 'aegislash-shield';
+entries['Aegislash-Blade'] = 'aegislash-blade';
+for (const size of ['Small', 'Large', 'Super']) {
+  entries[`Pumpkaboo-${size}`] = `pumpkaboo-${size.toLowerCase()}`;
+  entries[`Gourgeist-${size}`] = `gourgeist-${size.toLowerCase()}`;
+}
+entries['Pumpkaboo'] = 'pumpkaboo-average';
+entries['Gourgeist'] = 'gourgeist-average';
+entries['Xerneas-Neutral'] = 'xerneas';
+entries['Zygarde'] = 'zygarde-50';
+entries['Zygarde-50%'] = 'zygarde-50';
+entries['Zygarde-10%'] = 'zygarde-10';
+entries['Zygarde-Complete'] = 'zygarde-complete';
+entries['Groudon-Primal'] = 'groudon-primal';
+entries['Kyogre-Primal'] = 'kyogre-primal';
+
+// Gen 7
+entries['Oricorio'] = 'oricorio-baile';
+entries["Oricorio-Pa'u"] = 'oricorio-pau';
+entries['Oricorio-Pau'] = 'oricorio-pau';
+entries['Lycanroc'] = 'lycanroc-midday';
+entries['Wishiwashi'] = 'wishiwashi-solo';
+entries['Wishiwashi-School'] = 'wishiwashi-school';
+entries['Mimikyu'] = 'mimikyu-disguised';
+entries['Mimikyu-Busted'] = 'mimikyu-busted';
+entries['Minior'] = 'minior-red-meteor';
+entries['Minior-Meteor'] = 'minior-red-meteor';
+entries['Minior-Red'] = 'minior-red-meteor';
+for (const color of ['Orange', 'Yellow', 'Green', 'Blue', 'Indigo', 'Violet']) {
+  entries[`Minior-${color}`] = `minior-${color.toLowerCase()}-meteor`;
+}
+entries['Necrozma-Dawn-Wings'] = 'necrozma-dawn';
+entries['Necrozma-Dusk-Mane'] = 'necrozma-dusk';
+entries['Type: Null'] = 'type-null';
+for (const tapu of ['Koko', 'Lele', 'Bulu', 'Fini']) entries[`Tapu ${tapu}`] = `tapu-${tapu.toLowerCase()}`;
+
+// Gen 8
+entries['Toxtricity'] = 'toxtricity-amped';
+entries['Toxtricity-Low-Key'] = 'toxtricity-low-key';
+entries['Sinistea-Antique'] = 'sinistea';
+entries['Polteageist-Antique'] = 'polteageist';
+for (const flavor of ['Vanilla', 'Ruby', 'Matcha', 'Mint', 'Lemon', 'Salted']) {
+  entries[`Alcremie-${flavor}-Cream`] = 'alcremie';
+  entries[`Alcremie-${flavor}`] = 'alcremie';
+}
+addAll(['Alcremie-Ruby-Swirl', 'Alcremie-Caramel-Swirl', 'Alcremie-Rainbow-Swirl'], 'alcremie');
+entries['Eiscue'] = 'eiscue-ice';
+entries['Eiscue-Noice'] = 'eiscue-noice';
+entries['Indeedee'] = 'indeedee-male';
+entries['Indeedee-M'] = 'indeedee-male';
+entries['Indeedee-F'] = 'indeedee-female';
+entries['Morpeko'] = 'morpeko-full-belly';
+entries['Morpeko-Hangry'] = 'morpeko-hangry';
+entries["Sirfetch'd"] = 'sirfetchd';
+entries['Sirfetch\u2019d'] = 'sirfetchd';
+entries['Sirfetch\u00e2\u0080\u0099d'] = 'sirfetchd'; // mojibake seen in legacy pastes
+entries["Farfetch'd"] = 'farfetchd';
+entries['Farfetch\u2019d'] = 'farfetchd';
+entries["Farfetch'd-Galar"] = 'farfetchd-galar';
+entries['Urshifu'] = 'urshifu-single-strike';
+entries['Urshifu-Single-Strike'] = 'urshifu-single-strike';
+entries['Urshifu-Rapid-Strike'] = 'urshifu-rapid-strike';
+entries['Calyrex-Ice'] = 'calyrex-ice-rider';
+entries['Calyrex-Shadow'] = 'calyrex-shadow-rider';
+entries['Zacian'] = 'zacian';
+entries['Zacian-Crowned'] = 'zacian-crowned';
+entries['Zamazenta'] = 'zamazenta';
+entries['Zamazenta-Crowned'] = 'zamazenta-crowned';
+entries['Enamorus'] = 'enamorus-incarnate';
+entries['Basculegion'] = 'basculegion-male';
+entries['Basculegion-M'] = 'basculegion-male';
+entries['Basculegion-F'] = 'basculegion-female';
+
+// Gen 9
+entries['Oinkologne'] = 'oinkologne-male';
+entries['Oinkologne-M'] = 'oinkologne-male';
+entries['Oinkologne-F'] = 'oinkologne-female';
+entries['Maushold'] = 'maushold-family-of-three';
+entries['Maushold-Three'] = 'maushold-family-of-three';
+entries['Maushold-Four'] = 'maushold-family-of-four';
+entries['Squawkabilly'] = 'squawkabilly-green-plumage';
+for (const color of ['Green', 'Blue', 'White', 'Yellow']) entries[`Squawkabilly-${color}`] = `squawkabilly-${color.toLowerCase()}-plumage`;
+entries['Palafin'] = 'palafin-hero';
+entries['Palafin-Zero'] = 'palafin-zero';
+entries['Tatsugiri'] = 'tatsugiri-curly';
+for (const form of ['Curly', 'Droopy', 'Stretchy']) entries[`Tatsugiri-${form}`] = `tatsugiri-${form.toLowerCase()}`;
+entries['Dudunsparce'] = 'dudunsparce-two-segment';
+entries['Dudunsparce-Two-Segment'] = 'dudunsparce-two-segment';
+entries['Dudunsparce-Three-Segment'] = 'dudunsparce-three-segment';
+for (const name of ['Great Tusk', 'Scream Tail', 'Brute Bonnet', 'Flutter Mane', 'Slither Wing', 'Sandy Shocks', 'Roaring Moon', 'Walking Wake', 'Gouging Fire', 'Raging Bolt', 'Iron Treads', 'Iron Bundle', 'Iron Hands', 'Iron Jugulis', 'Iron Moth', 'Iron Thorns', 'Iron Valiant', 'Iron Leaves', 'Iron Boulder', 'Iron Crown']) {
+  entries[name] = name.toLowerCase().replace(/\s+/g, '-');
+}
+entries['Silther Wing'] = 'slither-wing'; // legacy typo kept as an alias
+entries['Poltchageist-Artisan'] = 'poltchageist';
+entries['Sinistcha-Masterpiece'] = 'sinistcha';
+entries['Ogerpon'] = 'ogerpon';
+for (const mask of ['Wellspring', 'Hearthflame', 'Cornerstone']) {
+  entries[`Ogerpon-${mask}`] = `ogerpon-${mask.toLowerCase()}-mask`;
+}
+entries['Terapagos'] = 'terapagos-terastal';
+entries['Terapagos-Terastal'] = 'terapagos-terastal';
+entries['Terapagos-Stellar'] = 'terapagos-stellar';
+
+// Misc commonly typed names whose default slugging is already correct but worth pinning.
+entries['Ho-Oh'] = 'ho-oh';
+entries['Porygon-Z'] = 'porygon-z';
+entries['Jangmo-o'] = 'jangmo-o';
+entries['Hakamo-o'] = 'hakamo-o';
+entries['Kommo-o'] = 'kommo-o';
+const SPECIAL_POKEMON_URL_ADJUSTMENTS = Object.freeze(entries);
+
+/** Case-, diacritic-, whitespace- and quote-insensitive comparison key. */
+function lookupKey(name) {
+  return String(name)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2018\u2019\u02BC\u0060\u00B4]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+const LOOKUP = new Map();
+for (const [name, slug] of Object.entries(SPECIAL_POKEMON_URL_ADJUSTMENTS)) {
+  const key = lookupKey(name);
+  if (!LOOKUP.has(key)) LOOKUP.set(key, slug);
+}
+function lookupSpecialAdjustment(name) {
+  if (typeof name !== 'string' || !name) return undefined;
+  return LOOKUP.get(lookupKey(name));
+}
+
+/**
+ * Splits a Showdown first line ("Nick (Species) (M) @ Item") into parts.
+ * Never throws; non-string input yields empty parts.
+ */
+function splitNameLine(rawName) {
+  const result = { species: '', nickname: '', gender: '' };
+  if (typeof rawName !== 'string') return result;
+  let text = rawName.normalize('NFC');
+  const at = text.indexOf('@');
+  if (at !== -1) text = text.slice(0, at);
+  text = text.trim();
+  const genderMatch = text.match(/^(.*?)\s*\(([MFmf])\)\s*$/);
+  if (genderMatch) {
+    result.gender = genderMatch[2].toUpperCase();
+    text = genderMatch[1].trim();
+  }
+  const nickMatch = text.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  if (nickMatch && nickMatch[2].trim()) {
+    result.nickname = nickMatch[1].trim();
+    text = nickMatch[2].trim();
+  }
+  result.species = text;
+  return result;
+}
+
+/** "Pika (Pikachu) (M) @ Light Ball" -> "Pikachu". */
+function stripNicknameAndGender(rawName) {
+  return splitNameLine(rawName).species;
+}
+
+function defaultSlug(name) {
+  return lookupKey(name)
+    .replace(/['.:%]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** Raw Showdown name (with optional nickname/gender) -> PokeAPI slug, or '' when empty. */
+function normalizePokemonSlug(rawName) {
+  const species = stripNicknameAndGender(rawName);
+  if (!species) return '';
+  return lookupSpecialAdjustment(species) ?? defaultSlug(species);
+}
+
+// --- src/core/schema.js ---
+const SCHEMA_VERSION = 1;
+const DEFAULT_SIGNATURE = 'Created by JoshBell302 on GitHub';
+const DEFAULT_THEME_ID = 'portland-dark';
+const MAX_POKEMON_PER_TEAM = 6;
+
+let idCounter = 0;
+function generateId(prefix = 'id') {
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') return cryptoObj.randomUUID();
+  idCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${idCounter.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeStats(input, fill, max) {
+  const out = { hp: fill, atk: fill, def: fill, spa: fill, spd: fill, spe: fill };
+  if (!isPlainObject(input)) return out;
+  for (const key of Object.keys(out)) {
+    const n = Number(input[key]);
+    if (input[key] !== undefined && input[key] !== null && Number.isFinite(n)) {
+      out[key] = Math.max(0, Math.min(max, Math.floor(n)));
+    }
+  }
+  return out;
+}
+
+function sanitizeTeamSource(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '')
+    .normalize('NFC')
+    .trim()
+    .slice(0, 20000);
+}
+function createPokemonSet(input = {}) {
+  const src = isPlainObject(input) ? input : {};
+  const name = sanitizeText(src.name, { maxLength: 60 });
+  const gender = typeof src.gender === 'string' && /^[MF]$/i.test(src.gender.trim()) ? src.gender.trim().toUpperCase() : '';
+  const level = Number.parseInt(src.level, 10);
+  const slugInput = sanitizeText(src.speciesSlug, { maxLength: 80 });
+  return {
+    name,
+    speciesSlug: slugInput || normalizePokemonSlug(name),
+    nickname: sanitizeText(src.nickname, { maxLength: 40 }),
+    gender,
+    item: sanitizeText(src.item, { maxLength: 60 }),
+    ability: sanitizeText(src.ability, { maxLength: 60 }),
+    teraType: sanitizeText(src.teraType, { maxLength: 30 }),
+    nature: sanitizeText(src.nature, { maxLength: 20 }),
+    evs: normalizeStats(src.evs, 0, 252),
+    ivs: normalizeStats(src.ivs, 31, 31),
+    moves: (Array.isArray(src.moves) ? src.moves : [])
+      .map((m) => sanitizeText(m, { maxLength: 60 }))
+      .filter(Boolean)
+      .slice(0, 4),
+    shiny: src.shiny === true,
+    level: Number.isInteger(level) && level >= 1 && level <= 100 ? level : 100,
+    spriteUrl: sanitizeUrl(src.spriteUrl, { allowData: true }),
+  };
+}
+function createStandingEntry(input = {}) {
+  const src = isPlainObject(input) ? input : {};
+  const warnings = (Array.isArray(src.warnings) ? src.warnings : [])
+    .map((w) => sanitizeText(w, { maxLength: 300 }))
+    .filter(Boolean);
+  const rawPokemon = Array.isArray(src.pokemon) ? src.pokemon : [];
+  if (rawPokemon.length > MAX_POKEMON_PER_TEAM) {
+    warnings.push(`Team had ${rawPokemon.length} Pokémon; only ${MAX_POKEMON_PER_TEAM} kept.`);
+  }
+  return {
+    id: sanitizeText(src.id, { maxLength: 80 }) || generateId('entry'),
+    placing: sanitizePlacing(src.placing),
+    name: sanitizeText(src.name, { maxLength: 60 }),
+    handle: sanitizeHandle(src.handle),
+    local: sanitizeText(src.local, { maxLength: 100 }),
+    teamSource: sanitizeTeamSource(src.teamSource),
+    pokemon: rawPokemon.slice(0, MAX_POKEMON_PER_TEAM).map(createPokemonSet),
+    warnings,
+  };
+}
+
+function normalizeEvent(input) {
+  const src = isPlainObject(input) ? input : {};
+  return {
+    eventType: EVENT_TYPES.includes(src.eventType) ? src.eventType : 'local',
+    customEventLabel: sanitizeText(src.customEventLabel, { maxLength: 60 }),
+    location: sanitizeText(src.location, { maxLength: 80 }),
+    date: sanitizeText(src.date, { maxLength: 40 }),
+    regulation: sanitizeText(src.regulation, { maxLength: 20 }),
+    playerCount: sanitizePlayerCount(src.playerCount),
+  };
+}
+
+function normalizeThemeConfig(input) {
+  const src = isPlainObject(input) ? input : {};
+  const overrides = {};
+  if (isPlainObject(src.overrides)) {
+    for (const [key, value] of Object.entries(src.overrides).slice(0, 40)) {
+      if (typeof value === 'string' || typeof value === 'number') {
+        Object.defineProperty(overrides, sanitizeText(key, { maxLength: 40, fallback: '_' }), {
+          value: sanitizeText(value, { maxLength: 2048 }),
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+      }
+    }
+  }
+  return { themeId: sanitizeText(src.themeId, { maxLength: 60, fallback: DEFAULT_THEME_ID }), overrides };
+}
+
+function isoOrNow(value, fallback) {
+  if (typeof value === 'string') {
+    const t = Date.parse(value);
+    if (Number.isFinite(t)) return new Date(t).toISOString();
+  }
+  return fallback;
+}
+function createEmptyTournament(overrides = {}) {
+  const now = new Date().toISOString();
+  const src = isPlainObject(overrides) ? overrides : {};
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    id: sanitizeText(src.id, { maxLength: 80 }) || generateId('tournament'),
+    createdAt: isoOrNow(src.createdAt, now),
+    updatedAt: isoOrNow(src.updatedAt, now),
+    event: normalizeEvent(src.event),
+    standings: (Array.isArray(src.standings) ? src.standings : []).map(createStandingEntry),
+    themeConfig: normalizeThemeConfig(src.themeConfig),
+    signature: typeof src.signature === 'string' ? sanitizeText(src.signature, { maxLength: 80 }) : DEFAULT_SIGNATURE,
+  };
+}
+
+/** Full normalization of untrusted input into a valid TournamentRecord. */
+function normalizeTournament(input) {
+  const record = createEmptyTournament(input);
+  return record;
+}
+function serializeTournament(tournament) {
+  return JSON.stringify(normalizeTournament(tournament));
+}
+
+/** Accepts a JSON string or object. Throws Error on invalid JSON or unsupported schemaVersion. */
+function deserializeTournament(data) {
+  let parsed = data;
+  if (typeof data === 'string') {
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      throw new Error('Invalid tournament JSON.');
+    }
+  }
+  if (!isPlainObject(parsed)) throw new Error('Tournament data must be an object.');
+  if (parsed.schemaVersion !== SCHEMA_VERSION) {
+    throw new Error(`Unsupported tournament schemaVersion: ${String(parsed.schemaVersion)}.`);
+  }
+  return normalizeTournament(parsed);
+}
+function formatEventTitle(event) {
+  const src = isPlainObject(event) ? event : {};
+  let label;
+  switch (src.eventType) {
+    case 'challenge':
+      label = 'VG LEAGUE CHALLENGE';
+      break;
+    case 'cup':
+      label = 'VG LEAGUE CUP';
+      break;
+    case 'custom':
+      label = sanitizeText(src.customEventLabel, { maxLength: 60 }).toUpperCase() || 'EVENT';
+      break;
+    default:
+      label = 'VG LEAGUE LOCAL';
+  }
+  const location = sanitizeText(src.location, { maxLength: 80 }).toUpperCase();
+  return location ? `${label} • ${location}` : label;
+}
+function formatEventSubtitle(event) {
+  const src = isPlainObject(event) ? event : {};
+  const parts = [];
+  const date = sanitizeText(src.date, { maxLength: 40 });
+  if (date) parts.push(date);
+  const regulation = sanitizeText(src.regulation, { maxLength: 20 });
+  if (regulation) parts.push(/^regulation\b/i.test(regulation) ? regulation : `Regulation ${regulation}`);
+  const count = sanitizePlayerCount(src.playerCount);
+  if (count > 0) parts.push(`${count} ${count === 1 ? 'Player' : 'Players'}`);
+  return parts.join(' • ');
+}
+
+function bump(map, key) {
+  if (typeof key !== 'string' || !key) return;
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+/** Usage counts across all standings: { teams, pokemon, items, abilities, teraTypes }. */
+function computeTournamentSummary(tournament) {
+  const pokemon = new Map();
+  const items = new Map();
+  const abilities = new Map();
+  const teraTypes = new Map();
+  const standings = isPlainObject(tournament) && Array.isArray(tournament.standings) ? tournament.standings : [];
+  let teams = 0;
+  let totalPokemon = 0;
+  for (const entry of standings) {
+    if (!isPlainObject(entry) || !Array.isArray(entry.pokemon)) continue;
+    if (entry.pokemon.length > 0) teams += 1;
+    for (const mon of entry.pokemon) {
+      if (!isPlainObject(mon)) continue;
+      totalPokemon += 1;
+      bump(pokemon, mon.speciesSlug || normalizePokemonSlug(mon.name));
+      bump(items, typeof mon.item === 'string' ? mon.item.trim() : '');
+      bump(abilities, typeof mon.ability === 'string' ? mon.ability.trim() : '');
+      bump(teraTypes, typeof mon.teraType === 'string' ? mon.teraType.trim() : '');
+    }
+  }
+  return {
+    teams,
+    totalPokemon,
+    pokemon: Object.fromEntries(pokemon),
+    items: Object.fromEntries(items),
+    abilities: Object.fromEntries(abilities),
+    teraTypes: Object.fromEntries(teraTypes),
+  };
+}
+
+// --- src/core/pokepaste.js ---
+const MAX_TEAM_SIZE = 6;
+const MAX_PASTE_LENGTH = 100000;
+
+const POKEPASTE_ID_RE = /^[A-Za-z0-9]{1,64}$/;
+
+/** Canonical "https://pokepast.es/<id>" or null when the input is not a valid PokéPaste link. */
+function normalizePokepasteUrl(input) {
+  if (typeof input !== 'string') return null;
+  let text = input.trim();
+  if (!text || /\s/.test(text)) return null;
+  const scheme = text.match(/^([a-z][a-z0-9+.-]*):/i);
+  if (scheme && !/^\/\//.test(text.slice(scheme[0].length))) {
+    // "javascript:alert(1)" style, or host:port without scheme — only http(s) with // is allowed.
+    return null;
+  }
+  if (scheme) {
+    if (!/^https?$/i.test(scheme[1])) return null;
+  } else if (text.startsWith('//')) {
+    text = `https:${text}`;
+  } else {
+    text = `https://${text}`;
+  }
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (url.hostname.toLowerCase() !== 'pokepast.es') return null;
+  if (url.username || url.password || url.port) return null;
+  const segments = url.pathname.split('/').filter((s, i, arr) => !(s === '' && (i === 0 || i === arr.length - 1)));
+  if (segments.length === 2 && segments[1].toLowerCase() === 'raw') segments.pop();
+  if (segments.length !== 1 || !POKEPASTE_ID_RE.test(segments[0])) return null;
+  return `https://pokepast.es/${segments[0]}`;
+}
+function isPokepasteUrl(input) {
+  return normalizePokepasteUrl(input) !== null;
+}
+function toPokepasteRawUrl(input) {
+  const base = normalizePokepasteUrl(input);
+  return base ? `${base}/raw` : null;
+}
+
+const STAT_KEYS = { hp: 'hp', atk: 'atk', def: 'def', spa: 'spa', spd: 'spd', spe: 'spe' };
+
+function emptyStats(fill) {
+  return { hp: fill, atk: fill, def: fill, spa: fill, spd: fill, spe: fill };
+}
+
+function parseStats(text, base, max) {
+  const stats = { ...base };
+  for (const match of text.matchAll(/(\d+)\s*(HP|Atk|Def|SpA|SpD|Spe)\b/gi)) {
+    const value = Math.min(max, Number.parseInt(match[1], 10));
+    stats[STAT_KEYS[match[2].toLowerCase()]] = value;
+  }
+  return stats;
+}
+
+const STAT_LINE_RE = /^(ability|level|evs|ivs|tera type|shiny|happiness|-|–|—|[A-Za-z]+ nature)/i;
+
+function parseBlock(block, blockIndex, warnings) {
+  const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+  const first = lines[0];
+  if (/^===.*===$/.test(first)) return null; // Showdown folder/team header
+  if (STAT_LINE_RE.test(first) && !first.includes('@')) {
+    warnings.push(`Block ${blockIndex}: missing Pokémon name line.`);
+    return null;
+  }
+  const at = first.indexOf('@');
+  const item = at === -1 ? '' : first.slice(at + 1).trim();
+  const { species, nickname, gender } = splitNameLine(first);
+  if (!species || !/^[\p{L}\p{N}][\p{L}\p{N} .'’:%\-♀♂]*$/u.test(species) || species.length > 60) {
+    warnings.push(`Block ${blockIndex}: could not read Pokémon name "${first.slice(0, 40)}".`);
+    return null;
+  }
+  const mon = {
+    name: species,
+    speciesSlug: normalizePokemonSlug(species),
+    nickname,
+    gender,
+    item: item === 'None' ? '' : item.slice(0, 60),
+    ability: '',
+    teraType: '',
+    nature: '',
+    evs: emptyStats(0),
+    ivs: emptyStats(31),
+    moves: [],
+    shiny: false,
+    level: 100,
+    spriteUrl: '',
+  };
+  for (const line of lines.slice(1)) {
+    let m;
+    if ((m = line.match(/^Ability:\s*(.*)$/i))) mon.ability = m[1].trim().slice(0, 60);
+    else if ((m = line.match(/^Tera Type:\s*(.*)$/i))) mon.teraType = m[1].trim().slice(0, 30);
+    else if ((m = line.match(/^Shiny:\s*(.*)$/i))) mon.shiny = /^(yes|true|1)$/i.test(m[1].trim());
+    else if ((m = line.match(/^Level:\s*(.*)$/i))) {
+      const level = Number.parseInt(m[1], 10);
+      if (Number.isInteger(level) && level >= 1 && level <= 100) mon.level = level;
+      else warnings.push(`${species}: invalid level "${m[1].trim().slice(0, 10)}".`);
+    } else if ((m = line.match(/^EVs:\s*(.*)$/i))) mon.evs = parseStats(m[1], mon.evs, 252);
+    else if ((m = line.match(/^IVs:\s*(.*)$/i))) mon.ivs = parseStats(m[1], mon.ivs, 31);
+    else if ((m = line.match(/^([A-Za-z]+)\s+Nature\b/i))) mon.nature = m[1];
+    else if ((m = line.match(/^[-–—]\s*(.+)$/))) {
+      const move = m[1].trim().slice(0, 60);
+      if (move) {
+        if (mon.moves.length < 4) mon.moves.push(move);
+        else if (mon.moves.length === 4) {
+          warnings.push(`${species}: more than 4 moves; extras ignored.`);
+          mon.moves.length = 4;
+          mon.moves.push(null); // sentinel to warn once; removed below
+        }
+      }
+    }
+  }
+  mon.moves = mon.moves.filter((x) => typeof x === 'string');
+  return mon;
+}
+
+/** Parses Showdown/PokéPaste team text. Never throws. */
+function parseShowdownTeam(rawText) {
+  const warnings = [];
+  if (typeof rawText !== 'string') {
+    return { pokemon: [], warnings: ['Team text is not a string.'] };
+  }
+  let text = rawText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim();
+  if (text.length > MAX_PASTE_LENGTH) {
+    warnings.push('Team text is very large; truncated.');
+    text = text.slice(0, MAX_PASTE_LENGTH);
+  }
+  if (!text) return { pokemon: [], warnings: ['Team text is empty.'] };
+  const blocks = text.split(/\n[ \t]*\n/);
+  const pokemon = [];
+  blocks.forEach((block, i) => {
+    if (!block.trim()) return;
+    const mon = parseBlock(block, i + 1, warnings);
+    if (mon) pokemon.push(mon);
+  });
+  if (pokemon.length === 0) warnings.push('No Pokémon found in team text.');
+  if (pokemon.length > MAX_TEAM_SIZE) {
+    warnings.push(`Found ${pokemon.length} Pokémon; only the first ${MAX_TEAM_SIZE} are kept.`);
+    pokemon.length = MAX_TEAM_SIZE;
+  }
+  return { pokemon, warnings };
+}
+
+// --- src/core/csv-parser.js ---
+const FALSY_CELLS = new Set(['', 'false', '0', 'no', 'n', 'off', 'f']);
+
+/** RFC-4180 tokenizer: returns an array of rows (arrays of strings). Never throws. */
+function tokenizeCsv(text) {
+  const rows = [];
+  if (typeof text !== 'string') return rows;
+  let src = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  let fieldStarted = false;
+  let i = 0;
+  const pushField = () => {
+    row.push(field);
+    field = '';
+    fieldStarted = false;
+  };
+  const pushRow = () => {
+    pushField();
+    rows.push(row);
+    row = [];
+  };
+  while (i < src.length) {
+    const ch = src[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (src[i + 1] === '"') {
+          field += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+        i += 1;
+        continue;
+      }
+      field += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' && !fieldStarted) {
+      inQuotes = true;
+      fieldStarted = true;
+      i += 1;
+    } else if (ch === ',') {
+      pushField();
+      i += 1;
+    } else if (ch === '\r' || ch === '\n') {
+      pushRow();
+      i += ch === '\r' && src[i + 1] === '\n' ? 2 : 1;
+    } else {
+      field += ch;
+      fieldStarted = true;
+      i += 1;
+    }
+  }
+  if (field !== '' || row.length > 0 || fieldStarted || inQuotes) pushRow();
+  return rows;
+}
+
+function normalizeHeader(cell) {
+  return String(cell ?? '').replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function isEmptyRow(row) {
+  return row.every((c) => String(c).trim() === '');
+}
+
+function isTruthyCell(cell) {
+  return !FALSY_CELLS.has(String(cell ?? '').trim().toLowerCase());
+}
+
+function columnIndex(headers, names, fallback) {
+  for (const name of names) {
+    const idx = headers.indexOf(name);
+    if (idx !== -1) return idx;
+  }
+  return fallback;
+}
+
+/** Parses data.csv style files. Never throws; problems go to warnings. */
+function parseStandingsCsv(csvText) {
+  const warnings = [];
+  const rows = tokenizeCsv(csvText);
+  if (typeof csvText !== 'string') warnings.push('CSV input is not a string.');
+  if (rows.length === 0 || rows.every(isEmptyRow)) {
+    if (typeof csvText === 'string') warnings.push('CSV is empty.');
+    return { tournament: createEmptyTournament(), warnings };
+  }
+
+  // Locate the standings header ("placing" in first column) after the event rows.
+  let headerIdx = rows.findIndex((r, i) => i > 0 && normalizeHeader(r[0]) === 'placing');
+  const metaHeaders = rows[0].map(normalizeHeader);
+  const startsWithStandings = normalizeHeader(rows[0][0]) === 'placing';
+  let event = {};
+  if (startsWithStandings) {
+    warnings.push('Event info row missing; using defaults.');
+    headerIdx = 0;
+  } else {
+    const metaRow = rows[1] && headerIdx !== 1 ? rows[1] : [];
+    if (headerIdx === 1 || !rows[1]) warnings.push('Event info row missing; using defaults.');
+    const get = (names) => {
+      const idx = columnIndex(metaHeaders, names, -1);
+      return idx === -1 ? '' : String(metaRow[idx] ?? '').trim();
+    };
+    const challenge = isTruthyCell(get(['challenge']));
+    const cup = isTruthyCell(get(['cup']));
+    event = {
+      eventType: challenge && !cup ? 'challenge' : cup && !challenge ? 'cup' : 'local',
+      location: get(['location']),
+      date: get(['date']),
+      regulation: get(['regulation', 'reg']),
+      playerCount: sanitizePlayerCount(get(['playercount', 'players', 'playercounts'])),
+    };
+  }
+
+  let dataStart;
+  let headers;
+  if (headerIdx === -1) {
+    warnings.push('Standings header row ("placing,name,...") not found; assuming default columns.');
+    headers = ['placing', 'name', 'handle', 'local', 'paste'];
+    dataStart = rows[2] && isEmptyRow(rows[2]) ? 3 : 2;
+  } else {
+    headers = rows[headerIdx].map(normalizeHeader);
+    dataStart = headerIdx + 1;
+  }
+  const col = {
+    placing: columnIndex(headers, ['placing', 'place', 'rank'], 0),
+    name: columnIndex(headers, ['name', 'player'], 1),
+    handle: columnIndex(headers, ['handle'], 2),
+    local: columnIndex(headers, ['local'], 3),
+    paste: columnIndex(headers, ['paste', 'pokepaste', 'team', 'teamsource'], 4),
+  };
+
+  const standings = [];
+  for (let r = dataStart; r < rows.length; r += 1) {
+    const row = rows[r];
+    if (isEmptyRow(row)) continue;
+    const cell = (idx) => String(row[idx] ?? '');
+    if (row.length <= col.paste) warnings.push(`Row ${r + 1} is short/truncated; missing fields left blank.`);
+    if (cell(col.placing).trim() === '' && cell(col.name).trim() === '') {
+      warnings.push(`Row ${r + 1} has no placing or name; skipped.`);
+      continue;
+    }
+    const paste = cell(col.paste).trim();
+    const entryWarnings = [];
+    let teamSource = paste;
+    let pokemon = [];
+    if (paste) {
+      const url = normalizePokepasteUrl(paste);
+      if (url) teamSource = url;
+      else if (/\n/.test(paste) || /@|Ability:/i.test(paste)) {
+        const parsed = parseShowdownTeam(paste);
+        pokemon = parsed.pokemon;
+        entryWarnings.push(...parsed.warnings);
+      } else {
+        entryWarnings.push('Team link is not a valid pokepast.es URL.');
+      }
+    } else {
+      entryWarnings.push('No team provided.');
+    }
+    standings.push(
+      createStandingEntry({
+        placing: cell(col.placing),
+        name: cell(col.name),
+        handle: cell(col.handle),
+        local: cell(col.local),
+        teamSource,
+        pokemon,
+        warnings: entryWarnings,
+      }),
+    );
+  }
+  if (standings.length === 0) warnings.push('No standings rows found.');
+  if (!event.playerCount && standings.length > 0) event.playerCount = standings.length;
+  const tournament = createEmptyTournament({ event, standings });
+  return { tournament, warnings };
+}
+
+function csvCell(value) {
+  const text = String(value ?? '');
+  return /[",\r\n]|^\s|\s$/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+function exportStandingsCsv(tournament) {
+  const event = tournament && typeof tournament === 'object' && tournament.event ? tournament.event : {};
+  const standings = tournament && Array.isArray(tournament.standings) ? tournament.standings : [];
+  const lines = [];
+  lines.push(['location', 'date', 'challenge', 'cup', 'regulation', 'player count'].join(','));
+  lines.push(
+    [
+      event.location,
+      event.date,
+      event.eventType === 'challenge' ? 'x' : '',
+      event.eventType === 'cup' ? 'x' : '',
+      event.regulation,
+      event.playerCount ? String(event.playerCount) : '',
+    ]
+      .map(csvCell)
+      .join(','),
+  );
+  lines.push(',,,,,');
+  lines.push('placing,name,handle,local,paste,');
+  for (const entry of standings) {
+    if (!entry || typeof entry !== 'object') continue;
+    lines.push([entry.placing, entry.name, entry.handle, entry.local, entry.teamSource, ''].map(csvCell).join(','));
+  }
+  return `${lines.join('\r\n')}\r\n`;
+}
+
+// --- src/core/layout.js ---
+// Pure layout geometry engine. No DOM access.
+const CANVAS_WIDTH = 1500;
+const BASE_CANVAS_HEIGHT = 1500;
+const HEADER_HEIGHT = 500;
+const SEPARATOR_HEIGHT = 50;
+const RHOMBUS_HEIGHT = 125;
+const RHOMBUS_DRAG_DOWN = 30;
+const RHOMBUS_WIDTH_DIFFERENCE = 100;
+const RHOMBUS_WIDTH_RATIO = 0.75;
+const STANDINGS_GAP = 50;
+const STANDINGS_MAX_CARD_HEIGHT = 200;
+const STANDINGS_MIN_CARD_HEIGHT = 150;
+const STANDINGS_CARD_RADIUS = 20;
+const STANDINGS_CARD_BORDER = 5;
+const STANDINGS_PLACING_BADGE_SIZE = 50;
+const STANDINGS_PLACING_BADGE_BORDER = 15;
+const STANDINGS_PLACING_BADGE_RADIUS = 10;
+const SIGNATURE_RESERVED_HEIGHT = 80;
+const CARD_COLOR = '#202B40';
+const TEXT_COLOR = '#FFFFFF';
+const MUTED_COLOR = '#C3D0E5';
+const SIGNATURE_BORDER_COLOR = '#D8B45A';
+const PLACEMENT_COLORS = Object.freeze({
+  1: '#D8B45A',
+  2: '#C0C7D1',
+  3: '#C27C43',
+  default: '#5B6B86',
+});
+
+const num = (v, fallback) => (Number.isFinite(v) ? v : fallback);
+
+function defaultMeasure(text, fontSize) {
+  return Array.from(text).length * fontSize * 0.55;
+}
+
+/** Fits text to maxWidth: shrinks the font first, then truncates with an ellipsis. */
+function fitTextToWidth(text, { maxWidth, maxFontSize, minFontSize = 12, measureText } = {}) {
+  const str = typeof text === 'string' ? text : text == null ? '' : String(text);
+  const maxF = Math.max(1, num(maxFontSize, 24));
+  const minF = Math.max(1, Math.min(num(minFontSize, 12), maxF));
+  const measure = typeof measureText === 'function' ? measureText : defaultMeasure;
+  const width = (t, f) => {
+    try {
+      const w = Number(measure(t, f));
+      return Number.isFinite(w) ? w : 0;
+    } catch {
+      return 0;
+    }
+  };
+  if (!str) return { text: '', fontSize: maxF, width: 0, truncated: false };
+  const limit = num(maxWidth, 0);
+  if (limit <= 0) return { text: '', fontSize: minF, width: 0, truncated: str.length > 0 };
+
+  if (width(str, maxF) <= limit) return { text: str, fontSize: maxF, width: width(str, maxF), truncated: false };
+  if (width(str, minF) <= limit) {
+    let lo = minF;
+    let hi = maxF;
+    // Integer binary search for the largest font size that fits.
+    lo = Math.ceil(lo);
+    hi = Math.floor(hi);
+    let best = minF;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (width(str, mid) <= limit) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return { text: str, fontSize: best, width: width(str, best), truncated: false };
+  }
+
+  const chars = Array.from(str);
+  let lo = 0;
+  let hi = chars.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (width(chars.slice(0, mid).join('').trimEnd() + '…', minF) <= limit) lo = mid;
+    else hi = mid - 1;
+  }
+  const out = lo > 0 ? chars.slice(0, lo).join('').trimEnd() + '…' : '…';
+  return { text: out, fontSize: minF, width: width(out, minF), truncated: true };
+}
+function computeRhombusGeometry(imageWidth = CANVAS_WIDTH, headerHeight = HEADER_HEIGHT) {
+  const w = Math.max(1, num(imageWidth, CANVAS_WIDTH));
+  const h = Math.max(0, num(headerHeight, HEADER_HEIGHT));
+  const width = Math.round(w * RHOMBUS_WIDTH_RATIO);
+  const bottomY = h + RHOMBUS_DRAG_DOWN;
+  const topY = bottomY - RHOMBUS_HEIGHT;
+  const cx = w / 2;
+  const topHalf = Math.max(0, (width - RHOMBUS_WIDTH_DIFFERENCE) / 2);
+  const bottomHalf = width / 2;
+  const points = [
+    { x: cx - topHalf, y: topY },
+    { x: cx + topHalf, y: topY },
+    { x: cx + bottomHalf, y: bottomY },
+    { x: cx - bottomHalf, y: bottomY },
+  ];
+  return {
+    points,
+    topY,
+    bottomY,
+    width,
+    textMaxWidth: Math.max(0, width - RHOMBUS_WIDTH_DIFFERENCE - 60),
+    dividerY: topY + RHOMBUS_HEIGHT * 0.56,
+  };
+}
+function computeLayout({
+  playerCount,
+  imageWidth = CANVAS_WIDTH,
+  baseHeight = BASE_CANVAS_HEIGHT,
+  headerHeight = HEADER_HEIGHT,
+  hasSignature = true,
+} = {}) {
+  const count = Math.max(0, Math.floor(num(playerCount, 0)));
+  const canvasWidth = Math.max(1, num(imageWidth, CANVAS_WIDTH));
+  const baseH = Math.max(1, num(baseHeight, BASE_CANVAS_HEIGHT));
+  const contentTop = Math.max(0, num(headerHeight, HEADER_HEIGHT)) + SEPARATOR_HEIGHT + STANDINGS_GAP;
+  const reserved = (hasSignature ? SIGNATURE_RESERVED_HEIGHT : 0) + STANDINGS_GAP;
+
+  if (count === 0) {
+    return {
+      canvasWidth, canvasHeight: baseH, columns: 0, rows: 0, cardWidth: 0, cardHeight: 0,
+      contentTop, contentBottom: Math.max(contentTop, baseH - reserved), cards: [],
+    };
+  }
+
+  const columns = count <= 2 ? 1 : 2;
+  const rows = Math.ceil(count / columns);
+  const margin = columns === 1 ? 2 * STANDINGS_GAP : STANDINGS_GAP;
+  const cardWidth = Math.max(1, (canvasWidth - 2 * margin - (columns - 1) * STANDINGS_GAP) / columns);
+
+  const available = baseH - contentTop - reserved;
+  let cardHeight = Math.min(STANDINGS_MAX_CARD_HEIGHT, (available - (rows - 1) * STANDINGS_GAP) / rows);
+  let canvasHeight = baseH;
+  if (cardHeight < STANDINGS_MIN_CARD_HEIGHT) {
+    cardHeight = STANDINGS_MIN_CARD_HEIGHT;
+    canvasHeight = Math.ceil(contentTop + rows * cardHeight + (rows - 1) * STANDINGS_GAP + reserved);
+  }
+  cardHeight = Math.floor(cardHeight);
+
+  const contentBottom = contentTop + rows * cardHeight + (rows - 1) * STANDINGS_GAP;
+  const cards = [];
+  for (let i = 0; i < count; i++) {
+    const row = Math.floor(i / columns);
+    const col = i % columns;
+    let x = margin + col * (cardWidth + STANDINGS_GAP);
+    if (columns === 2 && count % 2 === 1 && i === count - 1) x = (canvasWidth - cardWidth) / 2;
+    const y = contentTop + row * (cardHeight + STANDINGS_GAP);
+    cards.push({
+      x, y, width: cardWidth, height: cardHeight,
+      left: x, top: y, right: x + cardWidth, bottom: y + cardHeight,
+    });
+  }
+  return { canvasWidth, canvasHeight, columns, rows, cardWidth, cardHeight, contentTop, contentBottom, cards };
+}
+
+/** Evenly spaced square sprite slots in the area under the card's top slot. */
+function computeSpriteSlots(cardBounds, topSlotHeight, pokemonCount) {
+  const n = Math.floor(num(pokemonCount, 0));
+  if (n <= 0 || !cardBounds) return [];
+  const x = num(cardBounds.x ?? cardBounds.left, 0);
+  const y = num(cardBounds.y ?? cardBounds.top, 0);
+  const width = num(cardBounds.width, 0);
+  const height = num(cardBounds.height, 0);
+  const pad = 10;
+  const innerW = width - 2 * pad;
+  const availH = height - Math.max(0, num(topSlotHeight, 0)) - pad;
+  const slotWidth = innerW / n;
+  const size = Math.floor(Math.min(slotWidth, availH));
+  if (!(size > 0) || !(slotWidth > 0)) return [];
+  const slotY = y + height - pad - size;
+  return Array.from({ length: n }, (_, i) => ({
+    centerX: x + pad + slotWidth * (i + 0.5),
+    y: slotY,
+    size,
+    slotWidth,
+  }));
+}
+
+// --- src/adapters/storage.js ---
+/** Store interface: async list(), get(id), save(tournament), delete(id), clear(). */
+class MemoryTournamentStore {
+  #items = new Map();
+
+  async list() {
+    return [...this.#items.values()].map((s) => deserializeTournament(s));
+  }
+
+  async get(id) {
+    const raw = this.#items.get(id);
+    return raw ? deserializeTournament(raw) : null;
+  }
+
+  async save(tournament) {
+    const raw = serializeTournament(tournament);
+    const record = deserializeTournament(raw);
+    this.#items.set(record.id, raw);
+    return record;
+  }
+
+  async delete(id) {
+    return this.#items.delete(id);
+  }
+
+  async clear() {
+    this.#items.clear();
+  }
+}
+class LocalStorageTournamentStore {
+  constructor({ storage, prefix = 'vgc-standings:tournament:' } = {}) {
+    this.prefix = prefix;
+    this._storage = storage;
+  }
+
+  get storage() {
+    if (this._storage) return this._storage;
+    try {
+      return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  #keys() {
+    const s = this.storage;
+    if (!s) return [];
+    const keys = [];
+    try {
+      for (let i = 0; i < s.length; i++) {
+        const k = s.key(i);
+        if (typeof k === 'string' && k.startsWith(this.prefix)) keys.push(k);
+      }
+    } catch {
+      /* ignore */
+    }
+    return keys;
+  }
+
+  #read(key) {
+    try {
+      const raw = this.storage?.getItem(key);
+      return raw ? deserializeTournament(raw) : null;
+    } catch {
+      return null; // corrupt JSON or unsupported schema
+    }
+  }
+
+  async list() {
+    return this.#keys().map((k) => this.#read(k)).filter(Boolean);
+  }
+
+  async get(id) {
+    return this.#read(this.prefix + id);
+  }
+
+  /** Returns the saved record, or null if storage is unavailable or full. */
+  async save(tournament) {
+    try {
+      const raw = serializeTournament(tournament);
+      const record = deserializeTournament(raw);
+      const s = this.storage;
+      if (!s) return null;
+      s.setItem(this.prefix + record.id, raw);
+      return record;
+    } catch {
+      return null;
+    }
+  }
+
+  async delete(id) {
+    try {
+      const s = this.storage;
+      if (!s || s.getItem(this.prefix + id) == null) return false;
+      s.removeItem(this.prefix + id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async clear() {
+    try {
+      for (const k of this.#keys()) this.storage.removeItem(k);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// --- src/adapters/api.js ---
+class PokeApiClient {
+  constructor({ fetchFn = globalThis.fetch, timeoutMs = 10000, pokeApiBase = 'https://pokeapi.co/api/v2' } = {}) {
+    this.fetchFn = typeof fetchFn === 'function' ? fetchFn.bind(globalThis) : null;
+    this.timeoutMs = timeoutMs;
+    this.pokeApiBase = String(pokeApiBase).replace(/\/+$/, '');
+    this.pasteCache = new Map();
+    this.spriteCache = new Map();
+  }
+
+  clearCache() {
+    this.pasteCache.clear();
+    this.spriteCache.clear();
+  }
+
+  async fetchWithTimeout(url) {
+    if (!this.fetchFn) throw new Error('fetch is not available.');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await this.fetchFn(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** Resolves to raw paste text. Throws on invalid URL or failed request. */
+  async fetchPokepaste(url) {
+    const rawUrl = toPokepasteRawUrl(url);
+    if (!rawUrl) throw new Error('Invalid pokepast.es URL.');
+    if (this.pasteCache.has(rawUrl)) return this.pasteCache.get(rawUrl);
+    const promise = (async () => {
+      const res = await this.fetchWithTimeout(rawUrl);
+      if (!res.ok) throw new Error(`Pokepaste request failed (${res.status}).`);
+      return res.text();
+    })();
+    this.pasteCache.set(rawUrl, promise);
+    try {
+      return await promise;
+    } catch (err) {
+      this.pasteCache.delete(rawUrl);
+      throw err;
+    }
+  }
+
+  /** Never throws. Returns { url, warning }. */
+  async fetchPokemonSprite(slug, { shiny = false } = {}) {
+    const clean = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+    if (!clean) return { url: null, warning: 'Missing Pokémon name.' };
+    const cacheKey = `${clean}|${shiny ? 's' : 'n'}`;
+    if (this.spriteCache.has(cacheKey)) return this.spriteCache.get(cacheKey);
+    const promise = this.#loadSprite(clean, shiny);
+    this.spriteCache.set(cacheKey, promise);
+    return promise;
+  }
+
+  async #loadSprite(slug, shiny) {
+    try {
+      const res = await this.fetchWithTimeout(`${this.pokeApiBase}/pokemon/${encodeURIComponent(slug)}`);
+      if (!res.ok) return { url: null, warning: `Sprite not found for "${slug}" (${res.status}).` };
+      const data = await res.json();
+      const s = data?.sprites ?? {};
+      const key = shiny ? 'front_shiny' : 'front_default';
+      const url = s.other?.['official-artwork']?.[key] || s.other?.home?.[key] || s[key] || s.front_default || null;
+      return url ? { url, warning: null } : { url: null, warning: `No sprite available for "${slug}".` };
+    } catch (err) {
+      return { url: null, warning: `Could not load sprite for "${slug}": ${err?.message ?? 'network error'}.` };
+    }
+  }
+
+  /** Accepts a pokepast.es URL or raw Showdown text. Never throws. */
+  async resolveTeam(teamSource, { concurrency = 4 } = {}) {
+    const warnings = [];
+    const source = typeof teamSource === 'string' ? teamSource.trim() : '';
+    if (!source) return { pokemon: [], warnings: ['No team provided.'] };
+
+    let text = source;
+    if (toPokepasteRawUrl(source)) {
+      try {
+        text = await this.fetchPokepaste(source);
+      } catch (err) {
+        return { pokemon: [], warnings: [`Could not fetch team: ${err?.message ?? 'unknown error'}`] };
+      }
+    }
+
+    const parsed = parseShowdownTeam(text);
+    warnings.push(...(parsed.warnings ?? []));
+    const pokemon = (parsed.pokemon ?? []).map((m) => ({ ...m }));
+
+    let next = 0;
+    const worker = async () => {
+      while (next < pokemon.length) {
+        const mon = pokemon[next++];
+        const slug = mon.speciesSlug || normalizePokemonSlug(mon.name);
+        mon.speciesSlug = slug;
+        const { url, warning } = await this.fetchPokemonSprite(slug, { shiny: mon.shiny === true });
+        mon.spriteUrl = url ?? '';
+        if (warning) warnings.push(warning);
+      }
+    };
+    const n = Math.max(1, Math.min(Math.floor(concurrency) || 1, pokemon.length || 1));
+    await Promise.all(Array.from({ length: n }, worker));
+    return { pokemon, warnings };
+  }
+}
+
+// --- src/adapters/themes.js ---
+const DEFAULT_RAW_GITHUB_ASSETS = 'https://raw.githubusercontent.com/GabMott/vgc_standings/main/assets/';
+function getDefaultAssetBaseUrl(loc = globalThis.location) {
+  try {
+    const host = String(loc?.hostname ?? '').toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return './assets/';
+    if (host.endsWith('.github.io') && host !== 'gistpreview.github.io' && host !== 'htmlpreview.github.io') {
+      return './assets/';
+    }
+  } catch {
+    /* fall through */
+  }
+  return DEFAULT_RAW_GITHUB_ASSETS;
+}
+
+const COLOR_KEYS = [
+  'headerStart', 'headerEnd', 'bgStart', 'bgEnd', 'card', 'text', 'muted',
+  'accent', 'patternColor', 'bannerFill', 'bannerBorder', 'signatureBorder',
+];
+
+const portland = (id, name, bg, colors) => ({
+  id, name, pattern: 'pokeball',
+  images: { header: 'Portland VGC Header.jpg', vgcIcon: 'Pokemon VGC Icon.png', localIcon: 'Portland VGC Icon.png', background: bg },
+  colors,
+});
+
+const procedural = (id, name, pattern, colors) => ({
+  id, name, pattern,
+  images: { header: null, vgcIcon: null, localIcon: null, background: null },
+  colors,
+});
+
+const base = { text: '#FFFFFF', muted: '#C3D0E5', signatureBorder: '#D8B45A' };
+const BUILTIN_THEMES = Object.freeze([
+  portland('portland-dark', 'Portland Dark', 'Background DB.png', {
+    ...base, headerStart: '#101A2E', headerEnd: '#24365A', bgStart: '#0B1220', bgEnd: '#16233D',
+    card: '#202B40', accent: '#D8B45A', patternColor: '#FFFFFF', bannerFill: '#101A2E', bannerBorder: '#D8B45A',
+  }),
+  portland('portland-light', 'Portland Light', 'Background B.png', {
+    ...base, headerStart: '#2B4A7A', headerEnd: '#4D74B0', bgStart: '#8FB2E6', bgEnd: '#C9DBF5',
+    card: '#202B40', accent: '#D8B45A', patternColor: '#FFFFFF', bannerFill: '#1B2F54', bannerBorder: '#D8B45A',
+  }),
+  portland('portland-bw', 'Portland B&W', 'Background BW.png', {
+    ...base, headerStart: '#1A1A1A', headerEnd: '#3A3A3A', bgStart: '#111111', bgEnd: '#2A2A2A',
+    card: '#242424', accent: '#E0E0E0', patternColor: '#FFFFFF', bannerFill: '#141414', bannerBorder: '#E0E0E0',
+  }),
+  procedural('midnight-pokeball', 'Midnight Pokéball', 'pokeball', {
+    ...base, headerStart: '#0B1020', headerEnd: '#1E2A55', bgStart: '#0A0F1E', bgEnd: '#16204A',
+    card: '#1B2442', accent: '#E3463C', patternColor: '#FFFFFF', bannerFill: '#0B1020', bannerBorder: '#E3463C',
+  }),
+  procedural('crimson-arena', 'Crimson Arena', 'diagonal', {
+    ...base, headerStart: '#3A0A12', headerEnd: '#7A1626', bgStart: '#220509', bgEnd: '#4A0F1B',
+    card: '#2E1219', accent: '#FFB347', patternColor: '#FF6B6B', bannerFill: '#2A070D', bannerBorder: '#FFB347',
+  }),
+  procedural('emerald-circuit', 'Emerald Circuit', 'grid', {
+    ...base, headerStart: '#062B22', headerEnd: '#0E5A45', bgStart: '#04201A', bgEnd: '#0A3F32',
+    card: '#0F2F27', accent: '#4DF0B0', patternColor: '#4DF0B0', bannerFill: '#052219', bannerBorder: '#4DF0B0',
+  }),
+  procedural('minimal-slate', 'Minimal Slate', 'none', {
+    ...base, headerStart: '#2A3140', headerEnd: '#3C4558', bgStart: '#1E2430', bgEnd: '#2A3140',
+    card: '#202B40', accent: '#8FA3C7', patternColor: '#FFFFFF', bannerFill: '#222938', bannerBorder: '#8FA3C7',
+  }),
+]);
+
+function joinUrl(baseUrl, file) {
+  if (!file) return null;
+  if (/^(https?:|data:|blob:)/i.test(file)) return file;
+  return baseUrl + encodeURI(file);
+}
+
+/** Returns a fully resolved theme: validated colors and absolute image URLs (or null). */
+function resolveTheme(themeId, overrides = {}, assetBaseUrl = getDefaultAssetBaseUrl()) {
+  const theme = BUILTIN_THEMES.find((t) => t.id === themeId) ?? BUILTIN_THEMES[0];
+  const ov = overrides && typeof overrides === 'object' ? overrides : {};
+  const colors = {};
+  for (const key of COLOR_KEYS) {
+    const fallback = theme.colors[key];
+    colors[key] = normalizeHexColor(Object.hasOwn(ov, key) ? ov[key] : fallback, fallback);
+  }
+  let baseUrl = typeof assetBaseUrl === 'string' && assetBaseUrl ? assetBaseUrl : getDefaultAssetBaseUrl();
+  if (!baseUrl.endsWith('/')) baseUrl += '/';
+  const images = {};
+  for (const [k, file] of Object.entries(theme.images)) {
+    const override = Object.hasOwn(ov, `${k}Url`) && typeof ov[`${k}Url`] === 'string' ? ov[`${k}Url`] : file;
+    images[k] = joinUrl(baseUrl, override) || null;
+  }
+  const pattern = ['pokeball', 'grid', 'diagonal', 'none'].includes(ov.pattern) ? ov.pattern : theme.pattern;
+  return { id: theme.id, name: theme.name, pattern, colors, images };
+}
+
+// --- src/renderer/canvas-renderer.js ---
+const FONT = '"Helvetica Neue", Arial, sans-serif';
+
+/** Loads an image; resolves null on error/timeout. Never throws. */
+function loadImage(src, { timeoutMs = 10000 } = {}) {
+  return new Promise((resolve) => {
+    try {
+      if (typeof src !== 'string' || !src || typeof Image === 'undefined') return resolve(null);
+      const img = new Image();
+      let done = false;
+      const finish = (v) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(v);
+      };
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      img.onload = () => finish(img.naturalWidth > 0 ? img : null);
+      img.onerror = () => finish(null);
+      if (/^https?:/i.test(src)) img.crossOrigin = 'anonymous';
+      img.src = src;
+    } catch {
+      resolve(null);
+    }
+  });
+}
+function drawRoundedRectPath(ctx, x, y, w, h, r) {
+  const rad = Math.max(0, Math.min(Number(r) || 0, Math.abs(w) / 2, Math.abs(h) / 2));
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, rad);
+    return;
+  }
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+function imageSize(img) {
+  const w = img?.naturalWidth || img?.videoWidth || img?.width || 0;
+  const h = img?.naturalHeight || img?.videoHeight || img?.height || 0;
+  return w > 0 && h > 0 ? { w, h } : null;
+}
+
+function drawFit(ctx, img, dx, dy, dw, dh, cover) {
+  const s = imageSize(img);
+  if (!s || !(dw > 0) || !(dh > 0)) return false;
+  const scale = cover ? Math.max(dw / s.w, dh / s.h) : Math.min(dw / s.w, dh / s.h);
+  const w = s.w * scale;
+  const h = s.h * scale;
+  const ox = dx + (dw - w) / 2;
+  const oy = dy + (dh - h) / 2;
+  try {
+    if (cover) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(dx, dy, dw, dh);
+      ctx.clip();
+      ctx.drawImage(img, ox, oy, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, ox, oy, w, h);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+const drawImageCover = (ctx, img, dx, dy, dw, dh) => drawFit(ctx, img, dx, dy, dw, dh, true);
+const drawImageContain = (ctx, img, dx, dy, dw, dh) => drawFit(ctx, img, dx, dy, dw, dh, false);
+
+/** Wraps a context so missing methods (mock contexts) are no-ops. */
+function safeContext(ctx) {
+  return new Proxy(ctx, {
+    get(target, prop) {
+      const v = target[prop];
+      if (typeof v === 'function') return v.bind(target);
+      if (v === undefined) {
+        if (prop === 'measureText') return (t) => ({ width: String(t).length * 8 });
+        if (prop === 'createLinearGradient') return () => ({ addColorStop() {} });
+        return () => {};
+      }
+      return v;
+    },
+    set(target, prop, value) {
+      target[prop] = value;
+      return true;
+    },
+  });
+}
+
+function section(fn) {
+  try {
+    fn();
+  } catch {
+    /* rendering must never throw */
+  }
+}
+
+function setFont(ctx, size, weight = 'bold') {
+  ctx.font = `${weight} ${Math.round(size)}px ${FONT}`;
+}
+
+function fitText(ctx, text, maxWidth, maxFontSize, minFontSize, weight = 'bold') {
+  return fitTextToWidth(text, {
+    maxWidth, maxFontSize, minFontSize,
+    measureText: (t, size) => {
+      setFont(ctx, size, weight);
+      return ctx.measureText(t)?.width ?? 0;
+    },
+  });
+}
+
+function drawFitted(ctx, text, x, y, maxWidth, maxFont, minFont, { color = TEXT_COLOR, align = 'left', weight = 'bold' } = {}) {
+  const fit = fitText(ctx, text, maxWidth, maxFont, minFont, weight);
+  if (!fit.text) return fit;
+  setFont(ctx, fit.fontSize, weight);
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(fit.text, x, y);
+  return fit;
+}
+
+function drawGradientRect(ctx, x, y, w, h, c0, c1, horizontal = false) {
+  const g = ctx.createLinearGradient(x, y, horizontal ? x + w : x, horizontal ? y : y + h);
+  g.addColorStop(0, c0);
+  g.addColorStop(1, c1);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+}
+function drawPokeball(ctx, cx, cy, r, { top = '#E3463C', bottom = '#F4F4F4', line = '#1A1A1A', alpha = 1 } = {}) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.closePath();
+  ctx.fillStyle = top;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = bottom;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.1);
+  ctx.strokeStyle = line;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.moveTo(cx - r, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
+  ctx.fillStyle = bottom;
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPattern(ctx, pattern, color, x, y, w, h) {
+  if (pattern === 'none' || !(w > 0) || !(h > 0)) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  if (pattern === 'pokeball') {
+    const step = 150;
+    for (let row = 0, py = y + 60; py < y + h + step; row++, py += step) {
+      for (let px = x + (row % 2 ? step / 2 : 0); px < x + w + step; px += step) {
+        drawPokeball(ctx, px, py, 34, { top: color, bottom: color, line: color, alpha: 0.06 });
+      }
+    }
+  } else if (pattern === 'grid') {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.1;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let gx = x; gx <= x + w; gx += 60) { ctx.moveTo(gx, y); ctx.lineTo(gx, y + h); }
+    for (let gy = y; gy <= y + h; gy += 60) { ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); }
+    ctx.stroke();
+  } else if (pattern === 'diagonal') {
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.08;
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    for (let d = -h; d < w; d += 70) { ctx.moveTo(x + d, y + h); ctx.lineTo(x + d + h, y); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function placementColor(placing) {
+  const rank = parsePlacingRank(placing);
+  return PLACEMENT_COLORS[rank] ?? PLACEMENT_COLORS.default;
+}
+
+function drawHeader(ctx, theme, assets, width, headerH) {
+  const c = theme.colors;
+  if (!drawImageCover(ctx, assets.header, 0, 0, width, headerH)) {
+    drawGradientRect(ctx, 0, 0, width, headerH, c.headerStart, c.headerEnd);
+    drawPattern(ctx, theme.pattern, c.patternColor, 0, 0, width, headerH);
+  }
+  const iconSize = 220;
+  const iy = (headerH - iconSize) / 2 - 20;
+  drawImageContain(ctx, assets.vgcIcon, 40, iy, iconSize, iconSize);
+  drawImageContain(ctx, assets.localIcon, width - 40 - iconSize, iy, iconSize, iconSize);
+}
+
+function drawBanner(ctx, theme, tournament, geo) {
+  const c = theme.colors;
+  ctx.save();
+  ctx.beginPath();
+  geo.points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.fillStyle = c.bannerFill;
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = c.bannerBorder;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  const cx = (geo.points[0].x + geo.points[1].x) / 2;
+  const titleY = geo.topY + (geo.dividerY - geo.topY) / 2;
+  drawFitted(ctx, tournament.titleText, cx, titleY, geo.textMaxWidth, 44, 18, { color: c.text, align: 'center' });
+  const half = geo.textMaxWidth / 2;
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx - half, geo.dividerY);
+  ctx.lineTo(cx + half, geo.dividerY);
+  ctx.stroke();
+  drawFitted(ctx, tournament.subtitleText, cx, geo.dividerY + (geo.bottomY - geo.dividerY) / 2, geo.textMaxWidth, 30, 14, {
+    color: c.muted, align: 'center', weight: 'normal',
+  });
+}
+
+function drawSpriteFallback(ctx, slot, name, theme) {
+  const r = slot.size * 0.3;
+  drawPokeball(ctx, slot.centerX, slot.y + slot.size * 0.38, r, { top: theme.colors.accent });
+  const pillH = Math.max(14, slot.size * 0.22);
+  const pillW = Math.max(20, slot.slotWidth - 8);
+  const py = slot.y + slot.size - pillH;
+  drawRoundedRectPath(ctx, slot.centerX - pillW / 2, py, pillW, pillH, pillH / 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fill();
+  drawFitted(ctx, name || '?', slot.centerX, py + pillH / 2, pillW - 8, pillH * 0.7, 8, { align: 'center' });
+}
+
+function drawCard(ctx, entry, bounds, theme, assets) {
+  const c = theme.colors;
+  const { x, y, width, height } = bounds;
+  const color = placementColor(entry.placing);
+  drawRoundedRectPath(ctx, x, y, width, height, STANDINGS_CARD_RADIUS);
+  ctx.fillStyle = c.card || CARD_COLOR;
+  ctx.fill();
+  ctx.lineWidth = STANDINGS_CARD_BORDER;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+
+  const topH = Math.round(height * 0.38);
+  const badge = STANDINGS_PLACING_BADGE_SIZE;
+  const badgeW = badge + STANDINGS_PLACING_BADGE_BORDER;
+  const bx = x + 14;
+  const by = y + 12;
+  drawRoundedRectPath(ctx, bx, by, badgeW, badge, STANDINGS_PLACING_BADGE_RADIUS);
+  ctx.fillStyle = color;
+  ctx.fill();
+  drawFitted(ctx, entry.placing || '-', bx + badgeW / 2, by + badge / 2, badgeW - 10, 28, 10, { color: '#101010', align: 'center' });
+
+  const tx = bx + badgeW + 14;
+  const maxW = x + width - 16 - tx;
+  const hasHandle = Boolean(entry.handle);
+  const nameFit = drawFitted(ctx, entry.name || 'Unknown Trainer', tx, by + (hasHandle ? 14 : badge / 2), maxW, 30, 12, { color: c.text });
+  if (hasHandle) {
+    const room = Math.max(0, maxW - 0);
+    drawFitted(ctx, entry.handle, tx, by + 40, room, 18, 10, { color: c.muted, weight: 'normal' });
+  }
+  void nameFit;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + 16, y + topH + 6);
+  ctx.lineTo(x + width - 16, y + topH + 6);
+  ctx.stroke();
+
+  const mons = Array.isArray(entry.pokemon) ? entry.pokemon : [];
+  const slots = computeSpriteSlots(bounds, topH + 6, mons.length);
+  slots.forEach((slot, i) => {
+    const mon = mons[i] ?? {};
+    const key = mon.speciesSlug ? `${mon.speciesSlug}${mon.shiny ? ':shiny' : ''}` : '';
+    const img = assets.sprites?.[mon.spriteUrl] ?? assets.sprites?.[key] ?? null;
+    if (!drawImageContain(ctx, img, slot.centerX - slot.size / 2, slot.y, slot.size, slot.size)) {
+      drawSpriteFallback(ctx, slot, mon.name || mon.speciesSlug, theme);
+    }
+  });
+}
+
+function drawSignature(ctx, theme, text, width, height) {
+  const h = 50;
+  const y = height - SIGNATURE_RESERVED_HEIGHT / 2 - h / 2 - 5;
+  ctx.font = `normal 22px ${FONT}`;
+  const tw = Math.min(width - 100, (ctx.measureText(text)?.width ?? 300) + 60);
+  const x = (width - tw) / 2;
+  drawRoundedRectPath(ctx, x, y, tw, h, 14);
+  ctx.fillStyle = theme.colors.card || CARD_COLOR;
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = theme.colors.signatureBorder || SIGNATURE_BORDER_COLOR;
+  ctx.stroke();
+  drawFitted(ctx, text, width / 2, y + h / 2, tw - 30, 22, 10, { color: theme.colors.muted || MUTED_COLOR, align: 'center', weight: 'normal' });
+}
+
+/**
+ * Draws the full standings graphic. Never throws.
+ * assets: { header, vgcIcon, localIcon, background, sprites: { [spriteUrl | slug[:shiny]]: Image } }
+ * Returns { canvasWidth, canvasHeight, layout }.
+ */
+function renderStandingsCanvas(canvasOrCtx, tournament, theme, assets = {}, options = {}) {
+  const t = tournament && typeof tournament === 'object' ? tournament : {};
+  const a = assets && typeof assets === 'object' ? assets : {};
+  const th = {
+    pattern: 'none', ...(theme ?? {}),
+    colors: {
+      headerStart: '#101A2E', headerEnd: '#24365A', bgStart: '#0B1220', bgEnd: '#16233D', card: CARD_COLOR,
+      text: TEXT_COLOR, muted: MUTED_COLOR, accent: SIGNATURE_BORDER_COLOR, patternColor: '#FFFFFF',
+      bannerFill: '#101A2E', bannerBorder: SIGNATURE_BORDER_COLOR, signatureBorder: SIGNATURE_BORDER_COLOR,
+      ...(theme?.colors ?? {}),
+    },
+  };
+  const standings = Array.isArray(t.standings) ? t.standings.filter((e) => e && typeof e === 'object') : [];
+  const signature = typeof t.signature === 'string' ? t.signature.trim() : '';
+  const width = options?.width ?? CANVAS_WIDTH;
+  const layout = computeLayout({
+    playerCount: standings.length, imageWidth: width, headerHeight: options?.headerHeight ?? HEADER_HEIGHT,
+    hasSignature: Boolean(signature),
+  });
+  const result = { canvasWidth: layout.canvasWidth, canvasHeight: layout.canvasHeight, layout };
+
+  let ctx;
+  try {
+    const raw = canvasOrCtx && typeof canvasOrCtx.getContext === 'function' ? canvasOrCtx : null;
+    if (raw) {
+      raw.width = layout.canvasWidth;
+      raw.height = layout.canvasHeight;
+    }
+    ctx = safeContext(raw ? raw.getContext('2d') : canvasOrCtx);
+  } catch {
+    return result;
+  }
+
+  const W = layout.canvasWidth;
+  const H = layout.canvasHeight;
+  const headerH = options?.headerHeight ?? HEADER_HEIGHT;
+  const colors = th.colors;
+
+  section(() => { ctx.clearRect(0, 0, W, H); });
+  section(() => {
+    const bgY = headerH;
+    if (!drawImageCover(ctx, a.background, 0, bgY, W, H - bgY)) {
+      drawGradientRect(ctx, 0, bgY, W, H - bgY, colors.bgStart, colors.bgEnd);
+      drawPattern(ctx, th.pattern, colors.patternColor, 0, bgY, W, H - bgY);
+    }
+  });
+  section(() => drawHeader(ctx, th, a, W, headerH));
+  section(() => {
+    const g = ctx.createLinearGradient(0, 0, W, 0);
+    g.addColorStop(0, colors.headerStart);
+    g.addColorStop(0.5, colors.accent);
+    g.addColorStop(1, colors.headerStart);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, headerH, W, SEPARATOR_HEIGHT / 5);
+  });
+  section(() => {
+    const geo = computeRhombusGeometry(W, headerH);
+    drawBanner(ctx, th, {
+      titleText: options?.title ?? formatEventTitle(t.event),
+      subtitleText: options?.subtitle ?? formatEventSubtitle(t.event),
+    }, geo);
+  });
+  if (standings.length === 0) {
+    section(() => {
+      drawFitted(ctx, 'No standings yet', W / 2, layout.contentTop + 120, W - 200, 48, 20, { color: colors.muted, align: 'center' });
+    });
+  } else {
+    standings.forEach((entry, i) => {
+      section(() => drawCard(ctx, entry, layout.cards[i], th, a));
+    });
+  }
+  if (signature) section(() => drawSignature(ctx, th, signature, W, H));
+  return result;
+}
+
+// --- src/app.js ---
+const SAMPLE_CSV = `location,date,challenge,cup,regulation,player count
+Wyndon Stadium,July 8th,,x,M-8,8
+,,,,,
+placing,name,handle,local,paste,
+1,Ash Ketchum,@pikafan25,Wyndon-Cup-7-8-2022,https://pokepast.es/33bbc4f4633968dc,
+2,Leon,,Wyndon-Cup-7-8-2022,https://pokepast.es/380a942db3548064,
+3,Cynthia,,Wyndon-Cup-7-8-2022,https://pokepast.es/0b04ab36eb7d7b89,
+4,Diantha,@mskalos,Wyndon-Cup-7-8-2022,https://pokepast.es/77ac36ad28fa6ea6,`;
+
+const UPLOAD_SLOTS = [
+  { key: 'header', label: 'Header Image' },
+  { key: 'background', label: 'Background Image' },
+  { key: 'vgcIcon', label: 'Left Icon (VGC)' },
+  { key: 'localIcon', label: 'Right Icon (Local)' },
+];
+
+function createSampleTournament() {
+  const { tournament } = parseStandingsCsv(SAMPLE_CSV);
+  tournament.themeConfig = { themeId: DEFAULT_THEME_ID, overrides: {} };
+  tournament.signature = DEFAULT_SIGNATURE;
+  return tournament;
+}
+
+function safeDownloadFilename(tournament, ext) {
+  const loc = sanitizeText(tournament?.event?.location, { maxLength: 40, fallback: 'vgc-standings' })
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const date = sanitizeText(tournament?.event?.date, { maxLength: 24, fallback: '' })
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const base = [loc || 'vgc-standings', date].filter(Boolean).join('-');
+  return `${base}.${ext}`;
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function decodeUploadedImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file.'));
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      const img = new Image();
+      img.onload = () => {
+        const check = validateImageFileMeta({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+        if (!check.valid) {
+          reject(new Error(check.errors.join(' ')));
+          return;
+        }
+        resolve({ img, dataUrl });
+      };
+      img.onerror = () => reject(new Error('File could not be decoded as a valid image.'));
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function initApp(doc = globalThis.document) {
+  if (!doc) return null;
+
+  const $ = (id) => doc.getElementById(id);
+  const store = new LocalStorageTournamentStore();
+  const api = new PokeApiClient();
+
+  const canvas = $('standings-canvas');
+  const announcer = $('announcer');
+  const statusEl = $('status');
+  const warningsEl = $('warnings');
+  const analyticsBody = $('analytics-body');
+  const playersEl = $('players');
+  const playersEmptyEl = $('players-empty');
+  const draftsSelect = $('drafts-select');
+  const themeSelect = $('f-theme');
+  const uploadListEl = $('upload-list');
+
+  let tournament = createSampleTournament();
+  const customUploads = { header: null, background: null, vgcIcon: null, localIcon: null };
+  const imageCache = new Map();
+  let renderTimer = null;
+  let isRendering = false;
+  let pendingRender = false;
+
+  function announce(msg) {
+    if (!announcer) return;
+    announcer.textContent = '';
+    setTimeout(() => { announcer.textContent = msg; }, 50);
+  }
+
+  function setStatus(msg, isError = false) {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('is-error', isError);
+  }
+
+  function syncAriaField(el) {
+    if (!el || !el.matches?.('input, select, textarea')) return;
+    const invalid = typeof el.matches === 'function' && el.matches(':user-invalid');
+    el.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+  }
+
+  async function getCachedImage(url) {
+    if (!url) return null;
+    if (imageCache.has(url)) return imageCache.get(url);
+    const p = loadImage(url);
+    imageCache.set(url, p);
+    const img = await p;
+    if (!img) imageCache.delete(url);
+    return img;
+  }
+
+  function populateThemeOptions() {
+    if (!themeSelect) return;
+    themeSelect.innerHTML = '';
+    for (const theme of BUILTIN_THEMES) {
+      const opt = doc.createElement('option');
+      opt.value = theme.id;
+      opt.textContent = theme.name;
+      themeSelect.appendChild(opt);
+    }
+  }
+
+  function buildUploadControls() {
+    if (!uploadListEl) return;
+    uploadListEl.innerHTML = '';
+    for (const slot of UPLOAD_SLOTS) {
+      const row = doc.createElement('div');
+      row.className = 'upload-row';
+
+      const label = doc.createElement('label');
+      label.setAttribute('for', `upload-${slot.key}`);
+      label.textContent = slot.label;
+
+      const input = doc.createElement('input');
+      input.type = 'file';
+      input.id = `upload-${slot.key}`;
+      input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+
+      const clearBtn = doc.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.textContent = 'Clear';
+      clearBtn.className = 'small';
+
+      const msg = doc.createElement('span');
+      msg.className = 'upload-status muted';
+
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const metaCheck = validateImageFileMeta({ name: file.name, type: file.type, size: file.size });
+        if (!metaCheck.valid) {
+          msg.textContent = metaCheck.errors.join(' ');
+          msg.className = 'upload-status error-inline';
+          input.value = '';
+          return;
+        }
+        try {
+          const decoded = await decodeUploadedImage(file);
+          customUploads[slot.key] = decoded.img;
+          msg.textContent = `${file.name} (${decoded.img.naturalWidth}×${decoded.img.naturalHeight})`;
+          msg.className = 'upload-status muted';
+          scheduleRender();
+        } catch (err) {
+          msg.textContent = err?.message || 'Invalid image file.';
+          msg.className = 'upload-status error-inline';
+          input.value = '';
+        }
+      });
+
+      clearBtn.addEventListener('click', () => {
+        customUploads[slot.key] = null;
+        input.value = '';
+        msg.textContent = '';
+        scheduleRender();
+      });
+
+      row.append(label, input, clearBtn, msg);
+      uploadListEl.appendChild(row);
+    }
+  }
+
+  function syncFormFromState() {
+    const ev = tournament.event;
+    $('f-eventType').value = ev.eventType || 'local';
+    $('f-customLabel').value = ev.customEventLabel || '';
+    $('wrap-customLabel').hidden = ev.eventType !== 'custom';
+    $('f-location').value = ev.location || '';
+    $('f-date').value = ev.date || '';
+    $('f-regulation').value = ev.regulation || '';
+    $('f-playerCount').value = ev.playerCount ? String(ev.playerCount) : '';
+    $('f-signature').value = tournament.signature ?? '';
+
+    const themeId = tournament.themeConfig?.themeId || DEFAULT_THEME_ID;
+    themeSelect.value = BUILTIN_THEMES.some((t) => t.id === themeId) ? themeId : DEFAULT_THEME_ID;
+    const ov = tournament.themeConfig?.overrides || {};
+    const hasCustom = Boolean(ov.headerStart || ov.accent);
+    $('f-customColors').checked = hasCustom;
+    const resolved = resolveTheme(themeSelect.value, ov);
+    $('f-color1').value = resolved.colors.headerStart;
+    $('f-color2').value = resolved.colors.accent;
+    $('f-color1').disabled = !hasCustom;
+    $('f-color2').disabled = !hasCustom;
+
+    renderPlayerList();
+    renderAnalytics();
+  }
+
+  function readMetadataFromForm() {
+    const eventType = $('f-eventType').value;
+    $('wrap-customLabel').hidden = eventType !== 'custom';
+    tournament.event = {
+      eventType,
+      customEventLabel: sanitizeText($('f-customLabel').value, { maxLength: 60 }),
+      location: sanitizeText($('f-location').value, { maxLength: 80 }),
+      date: sanitizeText($('f-date').value, { maxLength: 40 }),
+      regulation: sanitizeText($('f-regulation').value, { maxLength: 20 }),
+      playerCount: sanitizePlayerCount($('f-playerCount').value),
+    };
+    tournament.signature = sanitizeText($('f-signature').value, { maxLength: 80 });
+    tournament.updatedAt = new Date().toISOString();
+
+    const useCustom = $('f-customColors').checked;
+    $('f-color1').disabled = !useCustom;
+    $('f-color2').disabled = !useCustom;
+    const overrides = useCustom
+      ? {
+          headerStart: normalizeHexColor($('f-color1').value, '#101A2E'),
+          accent: normalizeHexColor($('f-color2').value, '#D8B45A'),
+          bannerBorder: normalizeHexColor($('f-color2').value, '#D8B45A'),
+          signatureBorder: normalizeHexColor($('f-color2').value, '#D8B45A'),
+        }
+      : {};
+    tournament.themeConfig = { themeId: themeSelect.value, overrides };
+  }
+
+  function renderPlayerList() {
+    if (!playersEl) return;
+    playersEl.innerHTML = '';
+    if (playersEmptyEl) playersEmptyEl.hidden = tournament.standings.length > 0;
+
+    tournament.standings.forEach((entry, index) => {
+      const li = doc.createElement('li');
+      li.className = 'player-card';
+
+      const head = doc.createElement('div');
+      head.className = 'player-head';
+
+      const title = doc.createElement('strong');
+      title.textContent = `Player #${index + 1}`;
+
+      const actions = doc.createElement('div');
+      actions.className = 'player-actions';
+
+      const upBtn = doc.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'small';
+      upBtn.textContent = '↑';
+      upBtn.title = 'Move up';
+      upBtn.disabled = index === 0;
+      upBtn.addEventListener('click', () => {
+        const tmp = tournament.standings[index - 1];
+        tournament.standings[index - 1] = entry;
+        tournament.standings[index] = tmp;
+        renderPlayerList();
+        scheduleRender();
+      });
+
+      const downBtn = doc.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'small';
+      downBtn.textContent = '↓';
+      downBtn.title = 'Move down';
+      downBtn.disabled = index === tournament.standings.length - 1;
+      downBtn.addEventListener('click', () => {
+        const tmp = tournament.standings[index + 1];
+        tournament.standings[index + 1] = entry;
+        tournament.standings[index] = tmp;
+        renderPlayerList();
+        scheduleRender();
+      });
+
+      const dupBtn = doc.createElement('button');
+      dupBtn.type = 'button';
+      dupBtn.className = 'small';
+      dupBtn.textContent = 'Duplicate';
+      dupBtn.addEventListener('click', () => {
+        const copy = createStandingEntry({ ...entry, id: undefined });
+        tournament.standings.splice(index + 1, 0, copy);
+        renderPlayerList();
+        scheduleRender();
+      });
+
+      const delBtn = doc.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'small danger';
+      delBtn.textContent = 'Remove';
+      delBtn.addEventListener('click', () => {
+        tournament.standings.splice(index, 1);
+        renderPlayerList();
+        renderAnalytics();
+        scheduleRender();
+      });
+
+      actions.append(upBtn, downBtn, dupBtn, delBtn);
+      head.append(title, actions);
+
+      const grid = doc.createElement('div');
+      grid.className = 'player-grid';
+
+      const makeInput = (labelText, value, attrs, onChange) => {
+        const wrap = doc.createElement('label');
+        wrap.className = 'mini-field';
+        const span = doc.createElement('span');
+        span.textContent = labelText;
+        const inp = doc.createElement(attrs.textarea ? 'textarea' : 'input');
+        if (attrs.textarea) {
+          inp.rows = 2;
+        } else {
+          inp.type = 'text';
+        }
+        if (attrs.placeholder) inp.placeholder = attrs.placeholder;
+        if (attrs.maxlength) inp.maxLength = attrs.maxlength;
+        inp.value = value || '';
+        inp.addEventListener('input', () => onChange(inp.value));
+        wrap.append(span, inp);
+        if (attrs.span2) wrap.classList.add('span-2');
+        return { wrap, inp };
+      };
+
+      const placingField = makeInput('Placing', entry.placing, { placeholder: '1, T4…', maxlength: 12 }, (v) => {
+        entry.placing = sanitizePlacing(v);
+        scheduleRender();
+      });
+      const nameField = makeInput('Player Name', entry.name, { placeholder: 'Trainer name', maxlength: 60 }, (v) => {
+        entry.name = sanitizeText(v, { maxLength: 60 });
+        scheduleRender();
+      });
+      const handleField = makeInput('Handle', entry.handle, { placeholder: '@handle', maxlength: 32 }, (v) => {
+        entry.handle = v.trim() ? sanitizeHandle(v) : '';
+        scheduleRender();
+      });
+      const localField = makeInput('Local / Notes', entry.local, { placeholder: 'Optional tag', maxlength: 80 }, (v) => {
+        entry.local = sanitizeText(v, { maxLength: 80 });
+      });
+      const teamField = makeInput(
+        'Team Source (PokéPaste URL or Showdown Paste)',
+        entry.teamSource,
+        { textarea: true, span2: true, placeholder: 'https://pokepast.es/... or paste Showdown text' },
+        (v) => {
+          entry.teamSource = v;
+          if (!isPokepasteUrl(v) && v.trim()) {
+            const parsed = parseShowdownTeam(v);
+            if (parsed.pokemon.length > 0) {
+              entry.pokemon = parsed.pokemon;
+              entry.warnings = parsed.warnings;
+              renderAnalytics();
+              scheduleRender();
+            }
+          }
+        },
+      );
+      teamField.inp.addEventListener('blur', async () => {
+        if (entry.teamSource && entry.teamSource.trim()) {
+          await resolveEntryTeam(entry);
+          renderPlayerList();
+          renderAnalytics();
+          await renderNow();
+        }
+      });
+
+      grid.append(placingField.wrap, nameField.wrap, handleField.wrap, localField.wrap, teamField.wrap);
+
+      const chips = doc.createElement('div');
+      chips.className = 'pokemon-chips';
+      for (const mon of entry.pokemon || []) {
+        const chip = doc.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = mon.name || mon.speciesSlug || '?';
+        chips.appendChild(chip);
+      }
+
+      li.append(head, grid, chips);
+
+      if (entry.warnings?.length) {
+        const warnBox = doc.createElement('div');
+        warnBox.className = 'entry-warnings';
+        warnBox.textContent = entry.warnings.join(' • ');
+        li.appendChild(warnBox);
+      }
+
+      playersEl.appendChild(li);
+    });
+  }
+
+  async function resolveEntryTeam(entry) {
+    const src = (entry.teamSource || '').trim();
+    if (!src) {
+      entry.pokemon = [];
+      entry.warnings = [];
+      return;
+    }
+    const { pokemon, warnings } = await api.resolveTeam(src);
+    entry.pokemon = pokemon;
+    entry.warnings = warnings;
+  }
+
+  async function resolveAllTeams() {
+    setStatus('Fetching teams & Pokémon sprites…');
+    await Promise.all(tournament.standings.map((entry) => resolveEntryTeam(entry)));
+    renderPlayerList();
+    renderAnalytics();
+  }
+
+  function renderAnalytics() {
+    if (!analyticsBody) return;
+    const summary = computeTournamentSummary(tournament);
+    const fmt = (obj) => {
+      const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 12);
+      if (entries.length === 0) return 'None yet';
+      return entries.map(([k, v]) => `${k} (${v})`).join(', ');
+    };
+    analyticsBody.innerHTML = '';
+    const rows = [
+      ['Teams Parsed', `${summary.teams} (${summary.totalPokemon} Pokémon)`],
+      ['Top Pokémon', fmt(summary.pokemon)],
+      ['Top Items', fmt(summary.items)],
+      ['Top Abilities', fmt(summary.abilities)],
+      ['Top Tera Types', fmt(summary.teraTypes)],
+    ];
+    for (const [label, val] of rows) {
+      const p = doc.createElement('p');
+      const b = doc.createElement('strong');
+      b.textContent = `${label}: `;
+      p.append(b, doc.createTextNode(val));
+      analyticsBody.appendChild(p);
+    }
+  }
+
+  function renderWarningsList(extraWarnings = []) {
+    if (!warningsEl) return;
+    const validation = validateTournament(tournament);
+    const all = [...validation.errors, ...validation.warnings, ...extraWarnings];
+    for (const entry of tournament.standings) {
+      for (const w of entry.warnings || []) {
+        all.push(`${entry.name || `Placing ${entry.placing || '?'}`}: ${w}`);
+      }
+    }
+    warningsEl.innerHTML = '';
+    for (const msg of [...new Set(all)].slice(0, 20)) {
+      const li = doc.createElement('li');
+      li.textContent = msg;
+      warningsEl.appendChild(li);
+    }
+  }
+
+  async function renderNow() {
+    if (isRendering) {
+      pendingRender = true;
+      return;
+    }
+    isRendering = true;
+    try {
+      const theme = resolveTheme(tournament.themeConfig?.themeId, tournament.themeConfig?.overrides);
+      const [header, background, vgcIcon, localIcon] = await Promise.all([
+        customUploads.header ? Promise.resolve(customUploads.header) : getCachedImage(theme.images.header),
+        customUploads.background ? Promise.resolve(customUploads.background) : getCachedImage(theme.images.background),
+        customUploads.vgcIcon ? Promise.resolve(customUploads.vgcIcon) : getCachedImage(theme.images.vgcIcon),
+        customUploads.localIcon ? Promise.resolve(customUploads.localIcon) : getCachedImage(theme.images.localIcon),
+      ]);
+
+      const spriteUrls = new Set();
+      for (const entry of tournament.standings) {
+        for (const mon of entry.pokemon || []) {
+          if (mon.spriteUrl) spriteUrls.add(mon.spriteUrl);
+        }
+      }
+      const sprites = {};
+      await Promise.all(
+        [...spriteUrls].map(async (url) => {
+          const img = await getCachedImage(url);
+          if (img) sprites[url] = img;
+        }),
+      );
+
+      const result = renderStandingsCanvas(canvas, tournament, theme, {
+        header,
+        background,
+        vgcIcon,
+        localIcon,
+        sprites,
+      });
+
+      renderWarningsList();
+      setStatus(`Rendered ${result.canvasWidth}×${result.canvasHeight}px (${tournament.standings.length} players).`);
+    } catch (err) {
+      setStatus(`Render error: ${err?.message || 'unexpected error'}`, true);
+    } finally {
+      isRendering = false;
+      if (pendingRender) {
+        pendingRender = false;
+        renderNow();
+      }
+    }
+  }
+
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => {
+      renderNow();
+    }, 150);
+  }
+
+  async function refreshDraftsDropdown() {
+    if (!draftsSelect) return;
+    const list = await store.list();
+    draftsSelect.innerHTML = '';
+    const empty = doc.createElement('option');
+    empty.value = '';
+    empty.textContent = list.length ? '— select saved draft —' : '— none —';
+    draftsSelect.appendChild(empty);
+    for (const item of list) {
+      const opt = doc.createElement('option');
+      opt.value = item.id;
+      const loc = item.event?.location || 'Untitled';
+      const date = item.event?.date ? ` (${item.event.date})` : '';
+      opt.textContent = `${loc}${date}`;
+      if (item.id === tournament.id) opt.selected = true;
+      draftsSelect.appendChild(opt);
+    }
+  }
+
+  // Wire metadata & theme form events
+  const metaIds = ['f-eventType', 'f-customLabel', 'f-location', 'f-date', 'f-regulation', 'f-playerCount', 'f-signature', 'f-theme', 'f-customColors', 'f-color1', 'f-color2'];
+  for (const id of metaIds) {
+    const el = $(id);
+    if (!el) continue;
+    const handler = () => {
+      syncAriaField(el);
+      readMetadataFromForm();
+      scheduleRender();
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+    el.addEventListener('blur', () => syncAriaField(el));
+  }
+
+  // Toolbar actions
+  $('btn-sample')?.addEventListener('click', async () => {
+    tournament = createSampleTournament();
+    syncFormFromState();
+    await resolveAllTeams();
+    await renderNow();
+    announce('Loaded Masters Eight sample tournament.');
+  });
+
+  $('btn-add-player')?.addEventListener('click', () => {
+    const nextPlacing = String(tournament.standings.length + 1);
+    tournament.standings.push(createStandingEntry({ placing: nextPlacing }));
+    renderPlayerList();
+    renderAnalytics();
+    scheduleRender();
+  });
+
+  $('btn-render')?.addEventListener('click', async () => {
+    readMetadataFromForm();
+    await resolveAllTeams();
+    await renderNow();
+  });
+
+  $('btn-download')?.addEventListener('click', () => {
+    try {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setStatus('Could not export PNG (canvas may be tainted by a cross-origin image without CORS).', true);
+          return;
+        }
+        triggerDownload(blob, safeDownloadFilename(tournament, 'png'));
+        setStatus('PNG downloaded.');
+      }, 'image/png');
+    } catch {
+      setStatus('PNG export blocked by browser CORS policy. Try a procedural theme or upload images locally.', true);
+    }
+  });
+
+  // CSV Import / Export
+  $('btn-import-csv')?.addEventListener('click', () => $('file-csv')?.click());
+  $('file-csv')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const { tournament: parsed, warnings } = parseStandingsCsv(text);
+      tournament = parsed;
+      syncFormFromState();
+      await resolveAllTeams();
+      await renderNow();
+      if (warnings.length) renderWarningsList(warnings);
+      announce(`Imported CSV with ${tournament.standings.length} players.`);
+    } catch (err) {
+      setStatus(`CSV import failed: ${err?.message || 'invalid file'}`, true);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  $('btn-export-csv')?.addEventListener('click', () => {
+    readMetadataFromForm();
+    const csv = exportStandingsCsv(tournament);
+    triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8' }), safeDownloadFilename(tournament, 'csv'));
+    setStatus('CSV exported.');
+  });
+
+  // JSON Import / Export (analytics-ready schema)
+  $('btn-import-json')?.addEventListener('click', () => $('file-json')?.click());
+  $('file-json')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      tournament = deserializeTournament(text);
+      syncFormFromState();
+      await renderNow();
+      announce('Imported tournament JSON.');
+    } catch (err) {
+      setStatus(`JSON import failed: ${err?.message || 'invalid JSON'}`, true);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  $('btn-export-json')?.addEventListener('click', () => {
+    readMetadataFromForm();
+    const json = JSON.stringify(JSON.parse(serializeTournament(tournament)), null, 2);
+    triggerDownload(new Blob([json], { type: 'application/json;charset=utf-8' }), safeDownloadFilename(tournament, 'json'));
+    setStatus('Analytics-ready JSON exported.');
+  });
+
+  // Drafts (LocalStorageTournamentStore)
+  $('btn-draft-save')?.addEventListener('click', async () => {
+    readMetadataFromForm();
+    const saved = await store.save(tournament);
+    if (!saved) {
+      setStatus('Could not save draft (localStorage unavailable or full).', true);
+      return;
+    }
+    tournament = saved;
+    await refreshDraftsDropdown();
+    setStatus('Draft saved locally.');
+  });
+
+  $('btn-draft-new')?.addEventListener('click', async () => {
+    tournament = createEmptyTournament();
+    syncFormFromState();
+    await renderNow();
+    setStatus('Started a new blank tournament.');
+  });
+
+  $('btn-draft-delete')?.addEventListener('click', async () => {
+    const id = draftsSelect?.value;
+    if (!id) return;
+    await store.delete(id);
+    await refreshDraftsDropdown();
+    setStatus('Draft deleted.');
+  });
+
+  draftsSelect?.addEventListener('change', async () => {
+    const id = draftsSelect.value;
+    if (!id) return;
+    const loaded = await store.get(id);
+    if (loaded) {
+      tournament = loaded;
+      syncFormFromState();
+      await renderNow();
+      setStatus('Draft loaded.');
+    }
+  });
+
+  // Initial boot
+  populateThemeOptions();
+  buildUploadControls();
+  syncFormFromState();
+  refreshDraftsDropdown();
+  resolveAllTeams().then(() => renderNow());
+
+  return { renderNow, resolveAllTeams, getTournament: () => tournament };
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initApp(document));
+  } else {
+    initApp(document);
+  }
+}
+
+})();
+
+  </script>
+</body>
+</html>

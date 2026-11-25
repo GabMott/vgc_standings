@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>VGC Standings Generator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <p id="announcer" class="visually-hidden" aria-live="polite" role="status"></p>
+
+  <header class="app-header">
+    <h1>VGC Standings Generator</h1>
+    <div class="toolbar" role="toolbar" aria-label="File actions">
+      <button type="button" id="btn-sample">Load Sample (Masters Eight)</button>
+      <button type="button" id="btn-import-csv">Import CSV</button>
+      <button type="button" id="btn-export-csv">Export CSV</button>
+      <button type="button" id="btn-import-json">Import JSON</button>
+      <button type="button" id="btn-export-json">Export JSON</button>
+      <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+      <input type="file" id="file-json" accept=".json,application/json" hidden>
+    </div>
+    <div class="toolbar drafts" role="group" aria-labelledby="drafts-label">
+      <label id="drafts-label" for="drafts-select">Saved drafts</label>
+      <select id="drafts-select"><option value="">— none —</option></select>
+      <button type="button" id="btn-draft-save">Save</button>
+      <button type="button" id="btn-draft-new">New</button>
+      <button type="button" id="btn-draft-delete" class="danger">Delete</button>
+    </div>
+  </header>
+
+  <main id="workspace" class="workspace">
+    <div class="controls">
+      <section class="card" aria-labelledby="h-meta">
+        <h2 id="h-meta">Tournament Metadata</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-eventType">Event type</label>
+            <p class="hint" id="h-eventType">Sets the banner title.</p>
+            <select id="f-eventType" aria-describedby="h-eventType e-eventType">
+              <option value="challenge">Challenge</option>
+              <option value="cup">Cup</option>
+              <option value="local" selected>Local</option>
+              <option value="custom">Custom</option>
+            </select>
+            <p class="error-msg" id="e-eventType" data-error></p>
+          </div>
+          <div class="field" id="wrap-customLabel" hidden>
+            <label for="f-customLabel">Custom event label</label>
+            <p class="hint" id="h-customLabel">e.g. "Regional Qualifier".</p>
+            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="h-customLabel e-customLabel">
+            <p class="error-msg" id="e-customLabel" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-location">Location</label>
+            <p class="hint" id="h-location">City, venue or store name.</p>
+            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="h-location e-location">
+            <p class="error-msg" id="e-location" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-date">Date</label>
+            <p class="hint" id="h-date">Free text, e.g. "July 8th".</p>
+            <input id="f-date" type="text" maxlength="40" autocomplete="off" aria-describedby="h-date e-date">
+            <p class="error-msg" id="e-date" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-regulation">Regulation</label>
+            <p class="hint" id="h-regulation">e.g. "M-8" or "G".</p>
+            <input id="f-regulation" type="text" maxlength="20" autocomplete="off" aria-describedby="h-regulation e-regulation">
+            <p class="error-msg" id="e-regulation" data-error></p>
+          </div>
+          <div class="field">
+            <label for="f-playerCount">Player count</label>
+            <p class="hint" id="h-playerCount">Total attendees (0–9999). 0 hides it.</p>
+            <input id="f-playerCount" type="number" min="0" max="9999" step="1" inputmode="numeric" aria-describedby="h-playerCount e-playerCount">
+            <p class="error-msg" id="e-playerCount" data-error></p>
+          </div>
+          <div class="field span-2">
+            <label for="f-signature">Signature text</label>
+            <p class="hint" id="h-signature">Shown at the bottom of the image. Leave blank to hide.</p>
+            <input id="f-signature" type="text" maxlength="80" autocomplete="off" aria-describedby="h-signature e-signature">
+            <p class="error-msg" id="e-signature" data-error></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-theme">
+        <h2 id="h-theme">Theme &amp; Assets</h2>
+        <div class="grid-2">
+          <div class="field span-2">
+            <label for="f-theme">Theme</label>
+            <p class="hint" id="h-theme-hint">Three Portland VGC themes and four procedural ones.</p>
+            <select id="f-theme" aria-describedby="h-theme-hint"></select>
+          </div>
+          <div class="field span-2">
+            <label class="check"><input type="checkbox" id="f-customColors"> Use custom colors</label>
+            <p class="hint" id="h-colors">Color 1 drives gradients' start, Color 2 the end and accent.</p>
+          </div>
+          <div class="field">
+            <label for="f-color1">Color 1</label>
+            <input id="f-color1" type="color" value="#101a2e" aria-describedby="h-colors">
+          </div>
+          <div class="field">
+            <label for="f-color2">Color 2</label>
+            <input id="f-color2" type="color" value="#d8b45a" aria-describedby="h-colors">
+          </div>
+        </div>
+        <fieldset class="uploads">
+          <legend>Custom images (optional)</legend>
+          <p class="hint">PNG, JPEG, WebP or GIF, up to 10 MB. Images stay in your browser and are not saved with drafts.</p>
+          <div id="upload-list" class="upload-list"></div>
+        </fieldset>
+      </section>
+
+      <section class="card" aria-labelledby="h-players">
+        <div class="card-head">
+          <h2 id="h-players">Standings / Players</h2>
+          <button type="button" id="btn-add-player" class="primary">Add Player</button>
+        </div>
+        <p class="hint">Team Source accepts a pokepast.es link or pasted Showdown text.</p>
+        <ol id="players" class="players" aria-live="off"></ol>
+        <p id="players-empty" class="muted" hidden>No players yet. Add one to get started.</p>
+      </section>
+    </div>
+
+    <aside class="preview" aria-labelledby="h-preview">
+      <div class="preview-inner card">
+        <h2 id="h-preview">Live Preview</h2>
+        <div class="canvas-wrap">
+          <canvas id="standings-canvas" width="1500" height="1500" role="img" aria-label="Standings graphic preview"></canvas>
+        </div>
+        <div class="preview-actions">
+          <button type="button" id="btn-render">Render / Refresh Teams</button>
+          <button type="button" id="btn-download" class="primary">Download PNG</button>
+        </div>
+        <div id="status" class="status" role="status"></div>
+        <ul id="warnings" class="warning-list"></ul>
+        <details id="analytics" class="analytics">
+          <summary>Tournament Analytics Preview</summary>
+          <div id="analytics-body"></div>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="../src/app.js"></script>
+</body>
+</html>

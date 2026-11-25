@@ -1,154 +1,76 @@
-# Pokémon VGC Standings Generator
+# Pokémon VGC Standings Generator (Web App & Gist)
 
-A Python tool that automates the creation of Pokémon Video Game Championships (VGC) local tournament standings graphics. It takes tournament information and player standings from a CSV file, retrieves Pokémon teams from PokéPaste, and generates a standings image featuring player placements, names, social media handles, and Pokémon team artwork.
+A zero-dependency, 100% client-side web application for generating Pokémon Video Game Championships (VGC) local tournament standings graphics. Runs directly in the browser using HTML5 `<canvas>` and can be built into a single standalone HTML file for hosting as a **GitHub Gist**.
 
 ## Features
 
-* **CSV-based tournament data**: Store tournament metadata and player standings in one file.
-* **PokéPaste integration**: Retrieve each player's Pokémon team from a PokéPaste URL.
-* **Pokémon artwork**: Display Pokémon sprites and artwork using image URLs from PokéAPI Sprites and other supported sources.
-* **Automated standings cards**: Generate player cards containing placement, player name, handle, and Pokémon team.
-* **Placement-based styling**: Highlight first, second, and third place with gold, silver, and bronze colors.
-* **Customizable graphics**: Configure colors, fonts, backgrounds, headers, borders, and layout.
-* **Automated layout**: Arrange and center trainer cards based on the number of participants.
+* **100% Client-Side & Gist-Ready**: Runs with zero backend servers (PokéPaste, PokéAPI, and GitHub raw assets all support CORS). Build a single standalone `dist/vgc-standings.html` ready to paste into a GitHub Gist.
+* **Interactive Editor + Live Preview**: Edit tournament metadata, themes, colors, custom uploaded images, and player standings with instant canvas preview and PNG download.
+* **Dual Team Input**: Accepts either a `pokepast.es` URL **or** raw Pokémon Showdown paste text directly.
+* **CSV & Analytics-Ready JSON Import/Export**: Backward compatible with the original `data.csv` format, plus versioned `TournamentRecord` JSON export/import preserving full Pokémon sets (items, abilities, Tera types, EVs, IVs, natures, moves) and live usage analytics for future hosting/data compilation.
+* **Built-In Themes**: Includes the 3 Portland VGC themes (Dark, Light, B&W) plus 4 self-contained procedural Canvas themes (Midnight Pokéball, Crimson Arena, Emerald Circuit, Minimal Slate) that require zero external image assets.
+* **Hardened Against Malformed Input**: Handles long strings (auto-fit + ellipsis truncation), Unicode/emoji/RTL safety, duplicate/tied placings, non-numeric placings (`T4`, `1st`), nicknames in PokéPastes, missing/corrupt artwork fallbacks, and large player counts (dynamic canvas height).
 
-## Requirements
+## Quick Start
 
-### If you want to just run the script
-To generate the standings, update the data.csv file in the project directory and run the `.exe` executable.
+Requires **Node.js >= 22** (zero `npm install` needed).
 
-### If you want to iterate on the scripting
-* Python 3.10 or later recommended.
-* Pillow for image creation and manipulation.
-* Requests for retrieving online Pokémon data and artwork.
-* A valid PokéPaste URL for each player whose team should appear in the graphic.
-* Any image assets and fonts required by your chosen theme.
-
-## Installation
-
-1. Clone or download this repository.
-
-```
-git clone <repository-url>
-cd <repository-folder>
+### Run the Test Suite
+```bash
+npm test
 ```
 
-2. Install the dependencies.
-
+### Run with Coverage
+```bash
+npm run test:coverage
 ```
-pip install -r requirements.txt
+
+### Build the Single-File GitHub Gist Bundle
+```bash
+npm run build:gist
 ```
+This outputs `dist/vgc-standings.html`, which you can:
+- Open directly in any modern browser, or
+- Paste into a GitHub Gist as `index.html` and open via `https://gistpreview.github.io/?<YOUR_GIST_ID>`.
 
-## CSV Format
-
-The generator uses a single CSV file containing two sections:
-
-### Tournament metadata
-
-The first row contains the metadata column names, and the second row contains the values for the tournament. For example, if you wanted to do a standings graphic for a local that happens to be very similar to the Masters Eight tournament you could do something like this.
-
-|    location    |    date    | challenge | cup | regulation | player count |
-| :------------: |:----------:|:---------:|:---:|:----------:|:------------:|
-| Wyndon Stadium |  July 8th  |           |  x  |    M-8     |      8       |
-
-### Player standings
-
-After the metadata, include a blank row followed by the player standings header. For example, if you wanted to do a top 4 of that cup you would put these down.
-
-| placing |     name    |    handle    |         local          |                paste                 |
-|:-------:|:-----------:|:------------:|:----------------------:|:------------------------------------:|
-|    1    | Ash Ketchum |  @pikafan25  |  Wyndon-Cup-7-8-2022   | https://pokepast.es/33bbc4f4633968dc |
-|    2    |    Leon     |              |  Wyndon-Cup-7-8-2022   | https://pokepast.es/380a942db3548064 |
-|    3    |   Cynthia   |              |  Wyndon-Cup-7-8-2022   | https://pokepast.es/0b04ab36eb7d7b89 |
-|    4    |   Diantha   |   @mskalos   |  Wyndon-Cup-7-8-2022   | https://pokepast.es/77ac36ad28fa6ea6 |
-
-#### Notes:
-* The `handle` is a location to put a player's Twitter or X handle, this section can be left blank and the standings will adjust accordingly.
-* The local field is reserved for future functionality. See `Limitations and Future Improvements` for details.
-
-## Example Standings
-![example](/standings.png "example")
-
-## Usage
-
-1. Create a CSV file with the tournament metadata and player standings.
-2. Verify that each player's PokéPaste URL is accessible.
-3. Run the main Python script by using the command below, or run the `.exe`.
+### Run Locally During Development
+Serve the repo root with any static server so ES modules and `./assets/` resolve:
+```bash
+npx serve .
+# Then open http://localhost:3000/web/index.html
 ```
-python generate_standings.py
-```
-4. The generator processes the event data, builds the trainer and Pokémon objects, draws the standings graphic, and saves the resulting image.
-
-The exact command and output location depend on how the entry point and output path are configured in the current version of the project.
-
-If you want to recreate the `.exe` run
-```
-pip install pyinstaller 
-pyinstaller generate_standings.py --onefile --noconsole
- ```
-Then inside the `dist` folder pull out the `.exe` and move it into the main directory. You can then remove the `dist` and the `build` folders, as well as the `generate_standings.spec` file.
 
 ## Project Structure
-A suggested project structure is:
 
-```
+```text
 vgc_standings/
-├── generate_standings.py
-├── data.csv
-├── requirements.txt
-├── README.md
-├── assets/
-│   ├── header.png
-│   └── background.png
-└── output/
-    └── standings.png
+├── src/
+│   ├── core/              # Pure domain logic (zero DOM/network deps)
+│   │   ├── schema.js      # Versioned TournamentRecord + analytics summary
+│   │   ├── validation.js  # Input sanitization, hex/URL/image/schema validation
+│   │   ├── pokemon-names.js # Showdown species -> PokéAPI slug normalizer
+│   │   ├── pokepaste.js   # Strict pokepast.es URL normalizer & Showdown parser
+│   │   ├── csv-parser.js  # RFC-4180 CSV import/export (data.csv compatible)
+│   │   └── layout.js      # Dynamic card grid & binary-search text fitting
+│   ├── adapters/          # Swappable I/O & storage boundaries
+│   │   ├── storage.js     # TournamentStore (Memory + LocalStorage; drop-in for future API)
+│   │   ├── api.js         # PokeApiClient (timeout, caching, sprite fallback chain)
+│   │   └── themes.js      # Built-in Portland VGC + procedural themes
+│   ├── renderer/
+│   │   └── canvas-renderer.js # HTML5 Canvas 2D renderer with safe fallbacks
+│   └── app.js             # Browser UI controller
+├── web/
+│   ├── index.html         # Dev entry point
+│   └── styles.css         # Responsive accessible dark-mode UI
+├── scripts/
+│   └── build-gist.mjs     # Zero-dependency single-file Gist bundler
+├── tests/                 # Comprehensive node:test unit & edge-case suite
+├── dist/
+│   └── vgc-standings.html # Built single-file Gist output
+├── assets/                # Portland VGC theme artwork
+└── data.csv               # Sample Masters Eight CSV
 ```
 
-`generate_standings.py` — Main script, data loading, Pokémon retrieval, and image generation.
+## License and Attribution
 
-`standings.csv` — Tournament metadata and player standings.
-
-`requirements.txt` — Python dependencies.
-
-`assets/` — Header images, backgrounds, and other graphics.
-
-`output/` — Generated standings images.
-
-Your actual repository may use different filenames or directories.
-
-## How It Works
-
-The generator follows this general workflow:
-
-1. **Load tournament data**: Read the CSV and create a Local object containing the event metadata.
-2. **Build trainers**: Create a dictionary mapping each placement to its corresponding Trainer object.
-3. **Retrieve teams**: Fetch and parse the PokéPaste for each trainer.
-4. **Create Pokémon objects**: Store Pokémon names, items, abilities, moves, and artwork URLs.
-5. **Calculate card positions**: Determine card dimensions and arrange them based on the number of trainers.
-6. **Draw the graphic**: Use Pillow's ImageDraw functionality to render the background, title, trainer cards, Pokémon artwork, placement badges, borders, and creator credit.
-7. **Save the image**: Export the finished standings graphic.
-
-### Data Sources
-
-* **PokéAPI** — Provides Pokémon data and API endpoints used to retrieve Pokémon information.
-* **PokéAPI Sprites Repository** — Hosts Pokémon sprites and artwork, including official artwork and alternate visual assets.
-* **PokéPaste** — Hosts competitive Pokémon teams that the generator retrieves and parses.
-
-Some alternate Pokémon forms may not have the desired artwork available through the standard PokéAPI endpoints. These forms may require a separate image URL or a custom mapping. As new Pokémon and forms are introduced, they may not be supported immediately because the script relies on data available through PokéAPI. Support can be added as the API's data becomes available.
-
-## Limitations and Future Improvements
-
-### Potential future improvements include:
-
-* Caching downloaded Pokémon artwork to reduce repeated network requests.
-* Adding more robust support for alternate forms and variants.
-* Validating CSV data and reporting malformed PokéPaste URLs.
-* Supporting more flexible layouts for different player counts.
-* Creating more themes.
-* Adding automated tests for CSV loading, PokéPaste parsing, and card positioning.
-
-# License and Attribution
-
-This project is intended to automate the creation of community Pokémon VGC standings graphics.
-
-Pokémon names, artwork, and related assets belong to their respective owners. Review the relevant asset and API terms before redistributing generated graphics or artwork.
+Originally created by JoshBell302 on GitHub and refactored into a cross-platform web app. Pokémon names, artwork, and related assets belong to their respective owners.
