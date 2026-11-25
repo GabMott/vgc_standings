@@ -91,14 +91,17 @@ export function createStandingEntry(input = {}) {
     local: sanitizeText(src.local, { maxLength: 100 }),
     teamSource: sanitizeTeamSource(src.teamSource),
     pokemon: rawPokemon.slice(0, MAX_POKEMON_PER_TEAM).map(createPokemonSet),
+    redactName: src.redactName === true,
+    redactTeam: src.redactTeam === true,
     warnings,
   };
 }
 
 function normalizeEvent(input) {
   const src = isPlainObject(input) ? input : {};
+  const rawType = src.eventType === 'custom' || src.eventType === 'local' ? 'other' : src.eventType;
   return {
-    eventType: EVENT_TYPES.includes(src.eventType) ? src.eventType : 'local',
+    eventType: EVENT_TYPES.includes(rawType) ? rawType : 'cup',
     customEventLabel: sanitizeText(src.customEventLabel, { maxLength: 60 }),
     location: sanitizeText(src.location, { maxLength: 80 }),
     date: sanitizeText(src.date, { maxLength: 40 }),
@@ -139,6 +142,7 @@ export function createEmptyTournament(overrides = {}) {
   return {
     schemaVersion: SCHEMA_VERSION,
     id: sanitizeText(src.id, { maxLength: 80 }) || generateId('tournament'),
+    draftName: sanitizeText(src.draftName, { maxLength: 80 }),
     createdAt: isoOrNow(src.createdAt, now),
     updatedAt: isoOrNow(src.updatedAt, now),
     event: normalizeEvent(src.event),
@@ -180,28 +184,53 @@ export function formatEventTitle(event) {
   let label;
   switch (src.eventType) {
     case 'challenge':
-      label = 'VG LEAGUE CHALLENGE';
+      label = 'LEAGUE CHALLENGE';
       break;
     case 'cup':
-      label = 'VG LEAGUE CUP';
+      label = 'LEAGUE CUP';
       break;
+    case 'other':
     case 'custom':
       label = sanitizeText(src.customEventLabel, { maxLength: 60 }).toUpperCase() || 'EVENT';
       break;
     default:
-      label = 'VG LEAGUE LOCAL';
+      label = 'EVENT';
   }
   const location = sanitizeText(src.location, { maxLength: 80 }).toUpperCase();
   return location ? `${label} • ${location}` : label;
 }
 
+const MONTH_NAMES = Object.freeze([
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]);
+
+/** Formats ISO YYYY-MM-DD dates consistently (e.g. "July 8, 2026"); leaves legacy text as-is. */
+export function formatEventDate(value) {
+  const text = sanitizeText(value, { maxLength: 40 });
+  if (!text) return '';
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return text;
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return text;
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return text;
+  }
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
+}
+
 export function formatEventSubtitle(event) {
   const src = isPlainObject(event) ? event : {};
   const parts = [];
-  const date = sanitizeText(src.date, { maxLength: 40 });
+  const date = formatEventDate(src.date);
   if (date) parts.push(date);
   const regulation = sanitizeText(src.regulation, { maxLength: 20 });
-  if (regulation) parts.push(/^regulation\b/i.test(regulation) ? regulation : `Regulation ${regulation}`);
+  if (regulation && regulation.toLowerCase() !== 'other') {
+    parts.push(/^regulation\b/i.test(regulation) ? regulation : `Regulation ${regulation}`);
+  }
   const count = sanitizePlayerCount(src.playerCount);
   if (count > 0) parts.push(`${count} ${count === 1 ? 'Player' : 'Players'}`);
   return parts.join(' • ');

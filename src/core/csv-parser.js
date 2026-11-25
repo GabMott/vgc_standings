@@ -109,7 +109,7 @@ export function parseStandingsCsv(csvText) {
     const challenge = isTruthyCell(get(['challenge']));
     const cup = isTruthyCell(get(['cup']));
     event = {
-      eventType: challenge && !cup ? 'challenge' : cup && !challenge ? 'cup' : 'local',
+      eventType: challenge && !cup ? 'challenge' : cup && !challenge ? 'cup' : 'other',
       location: get(['location']),
       date: get(['date']),
       regulation: get(['regulation', 'reg']),

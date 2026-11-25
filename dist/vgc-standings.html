@@ -19,22 +19,31 @@
   --ok: #34d399;
   --warn: #fbbf24;
   --err: #f87171;
+  --fs-title: 1.25rem;
+  --fs-heading: 1.05rem;
+  --fs-body: 0.9375rem;
+  --fs-label: 0.875rem;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 @supports not (accent-color: #3b82f6) {
   input[type="checkbox"], input[type="radio"] { outline: 1px solid var(--brand); }
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.45; }
-h1, h2 { margin: 0; line-height: 1.2; }
-h1 { font-size: 1.25rem; }
-h2 { font-size: 1.05rem; margin-bottom: .5rem; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-size: var(--fs-body); line-height: 1.45;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+h1, h2 { margin: 0; line-height: 1.25; }
+h1 { font-size: var(--fs-title); }
+h2 { font-size: var(--fs-heading); margin-bottom: .5rem; }
 
 .visually-hidden {
   position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
-.skip-link { position: absolute; left: .5rem; top: -3rem; background: var(--brand); color: #fff; padding: .5rem .75rem; border-radius: .4rem; z-index: 20; }
+.skip-link { position: absolute; left: .5rem; top: -3rem; background: var(--brand); color: #fff; padding: .5rem .75rem; border-radius: .4rem; z-index: 20; font-size: var(--fs-body); }
 .skip-link:focus { top: .5rem; }
 [hidden] { display: none !important; }
 
@@ -44,9 +53,11 @@ h2 { font-size: 1.05rem; margin-bottom: .5rem; }
   position: sticky; top: 0; z-index: 10;
 }
 .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.toolbar.drafts label { color: var(--muted); font-size: .85rem; }
+.toolbar label { color: var(--muted); font-size: var(--fs-label); font-weight: 600; }
+.toolbar select { width: auto; min-width: 11rem; padding: .42rem .6rem; }
 
-button, select, input, textarea { font: inherit; color: inherit; }
+button, select, input, textarea { font: inherit; font-size: var(--fs-body); color: inherit; }
+button, select, input[type="checkbox"], .redact-toggle { touch-action: manipulation; }
 button {
   background: var(--panel-2); border: 1px solid var(--border); border-radius: .5rem;
   padding: .45rem .8rem; cursor: pointer;
@@ -54,15 +65,31 @@ button {
 button:hover { border-color: var(--brand); }
 button.primary { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
 button.danger { color: var(--err); }
-button.small { padding: .25rem .55rem; font-size: .85rem; }
+button.danger-solid { background: #dc2626; border-color: #dc2626; color: #fff; font-weight: 600; }
+button.danger-solid:hover { background: #b91c1c; border-color: #b91c1c; }
+button.small { padding: .25rem .55rem; font-size: var(--fs-label); }
 button:disabled { opacity: .5; cursor: not-allowed; }
 :focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
 
-input[type="text"], input[type="number"], select, textarea {
-  width: 100%; background: #0e1527; border: 1px solid var(--border); border-radius: .5rem; padding: .5rem .6rem;
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%; min-width: 0; max-width: 100%;
+  background: #0e1527; border: 1px solid var(--border); border-radius: .5rem; padding: .5rem .6rem;
+}
+input:disabled, select:disabled, textarea:disabled { opacity: .45; cursor: not-allowed; }
+input[type="date"] {
+  color-scheme: dark; display: block; min-height: 2.5rem; line-height: 1.4;
+}
+.stepper { display: flex; align-items: stretch; gap: .35rem; }
+.stepper input[type="text"] { flex: 1 1 auto; min-width: 0; text-align: center; font-variant-numeric: tabular-nums; }
+.stepper-btn {
+  flex: 0 0 2.5rem; padding: 0; display: grid; place-items: center;
+  font-size: 1.15rem; font-weight: 700; line-height: 1;
 }
 input[type="color"] { width: 3.5rem; height: 2.25rem; padding: 0; background: none; border: 1px solid var(--border); border-radius: .4rem; }
-textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+textarea {
+  resize: vertical; min-height: 2.75rem; max-height: 28rem; line-height: 1.4;
+  overflow-y: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-body);
+}
 
 .workspace {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem;
@@ -71,16 +98,23 @@ textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menl
 .controls { display: grid; gap: 1rem; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: .85rem; padding: 1rem; }
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-.preview { position: sticky; top: 4.75rem; max-height: calc(100vh - 5.5rem); overflow: auto; border-radius: .85rem; }
+.top-cut-control { display: flex; align-items: center; gap: .5rem; }
+.top-cut-control label { font-size: var(--fs-label); font-weight: 600; color: var(--muted); white-space: nowrap; }
+.top-cut-control select { width: auto; min-width: 4.5rem; padding: .35rem .6rem; }
+.preview {
+  position: sticky; top: 4.75rem;
+  max-height: calc(100vh - 5.5rem); max-height: calc(100dvh - 5.5rem);
+  overflow: auto; -webkit-overflow-scrolling: touch; border-radius: .85rem;
+}
 
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+.field, .mini-field, .player { min-width: 0; }
 .span-2 { grid-column: 1 / -1; }
-.field label { display: block; font-weight: 600; font-size: .9rem; }
+.field label, .mini-field > span { display: block; font-weight: 600; font-size: var(--fs-label); margin-bottom: .3rem; }
 .field label.check { display: flex; gap: .5rem; align-items: center; }
-.hint { margin: .1rem 0 .35rem; color: var(--muted); font-size: .8rem; }
 .muted { color: var(--muted); }
 
-.error-msg { margin: .25rem 0 0; color: var(--err); font-size: .8rem; min-height: 0; }
+.error-msg { margin: .25rem 0 0; color: var(--err); font-size: var(--fs-label); min-height: 0; }
 .error-msg:empty { display: none; }
 .error-msg::before { content: "⚠ "; }
 :is(:user-invalid, .user-invalid-fallback), [aria-invalid="true"] {
@@ -91,54 +125,85 @@ textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menl
 .canvas-wrap { background: #05070f; border-radius: .6rem; overflow: hidden; border: 1px solid var(--border); }
 #standings-canvas { display: block; width: 100%; height: auto; }
 .preview-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
-.status { min-height: 1.4em; font-size: .9rem; color: var(--muted); }
+.status { min-height: 1.4em; font-size: var(--fs-label); color: var(--muted); }
 .status.error { color: var(--err); }
 .status.ok { color: var(--ok); }
-.warning-list { margin: .5rem 0 0; padding: 0; list-style: none; display: grid; gap: .25rem; font-size: .82rem; }
-.warning-list li { color: var(--warn); }
-.warning-list li::before { content: "⚠ "; }
-.analytics { margin-top: .75rem; border-top: 1px solid var(--border); padding-top: .5rem; }
-.analytics summary { cursor: pointer; font-weight: 600; }
-.analytics h3 { font-size: .85rem; margin: .6rem 0 .2rem; color: var(--muted); }
-.analytics table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-.analytics td { padding: .1rem .3rem; border-bottom: 1px solid var(--border); }
-.analytics td:last-child { text-align: right; width: 3rem; }
-
-.uploads { border: 1px solid var(--border); border-radius: .6rem; margin: .75rem 0 0; padding: .5rem .75rem .75rem; }
-.uploads legend { padding: 0 .4rem; font-weight: 600; font-size: .9rem; }
-.upload-list { display: grid; gap: .6rem; }
-.upload-row { display: grid; grid-template-columns: 7rem 1fr auto; gap: .5rem; align-items: center; }
-.upload-row .upload-status { grid-column: 2 / -1; font-size: .8rem; color: var(--muted); margin: 0; }
-.upload-row .upload-status.error { color: var(--err); }
+.warning-list { display: none; }
 
 .players { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .75rem; }
 .player { background: var(--panel-2); border: 1px solid var(--border); border-radius: .7rem; padding: .75rem; }
 .player-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4rem; align-items: center; margin-bottom: .5rem; }
-.player-head strong { font-size: .9rem; }
+.player-head strong { font-size: var(--fs-body); }
 .player-actions { display: flex; flex-wrap: wrap; gap: .3rem; }
-.player-grid { display: grid; grid-template-columns: 6rem 1fr 1fr; gap: .5rem .75rem; }
+.player-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .75rem; }
 .player-grid .wide { grid-column: 1 / -1; }
-.player-grid label { font-size: .8rem; font-weight: 600; display: block; }
-.badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
-.badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 999px; border: 1px solid var(--border); background: #0e1527; }
-.badge.ok { color: var(--ok); border-color: var(--ok); }
-.badge.warn { color: var(--warn); border-color: var(--warn); }
-.badge.err { color: var(--err); border-color: var(--err); }
-.badge.busy { color: #93c5fd; border-color: #93c5fd; }
-.chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; }
-.chip { display: inline-flex; align-items: center; gap: .25rem; font-size: .78rem; background: #0e1527; border: 1px solid var(--border); border-radius: .5rem; padding: .1rem .45rem .1rem .15rem; }
-.chip img { width: 28px; height: 28px; object-fit: contain; }
-.chip .nosprite { width: 28px; height: 28px; display: grid; place-items: center; color: var(--muted); }
+.player-grid label { font-size: var(--fs-label); font-weight: 600; display: block; }
+.team-mode-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .35rem; }
+.team-mode-bar > span { font-size: var(--fs-label); font-weight: 600; }
+.mode-toggle { display: inline-flex; background: #0e1527; border: 1px solid var(--border); border-radius: .45rem; padding: 2px; gap: 2px; }
+.mode-toggle button { border: 0; background: transparent; padding: .25rem .6rem; font-size: var(--fs-label); border-radius: .35rem; color: var(--muted); }
+.mode-toggle button.active { background: var(--brand); color: #fff; font-weight: 600; }
+.manual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem .6rem; }
+.poke-combo { position: relative; }
+.poke-combo input[type="text"] { padding: .45rem .6rem; font-size: var(--fs-body); }
+.poke-suggest {
+  position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 30;
+  list-style: none; margin: 0; padding: .2rem; background: #0e1527;
+  border: 1px solid var(--brand); border-radius: .45rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .55); max-height: 12rem; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
+.poke-suggest li {
+  padding: .45rem .6rem; border-radius: .3rem; cursor: pointer; font-size: var(--fs-body);
+}
+.poke-suggest li:hover, .poke-suggest li.active {
+  background: var(--brand); color: #fff;
+}
+.redact-toggles { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .55rem; padding-top: .45rem; border-top: 1px solid var(--border); }
+.redact-toggle {
+  display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-label);
+  color: var(--muted); cursor: pointer; -webkit-user-select: none; user-select: none;
+}
+.redact-toggle input[type="checkbox"] { margin: 0; }
+.entry-warnings { margin-top: .4rem; font-size: var(--fs-label); color: var(--warn); }
+
+dialog.modal {
+  margin: auto; padding: 0; border: 1px solid var(--border); border-radius: .85rem;
+  background: var(--panel); color: var(--text); max-width: 26rem; width: calc(100% - 2rem);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .65);
+}
+dialog.modal::backdrop { background: rgba(5, 8, 18, .72); }
+.modal-card { padding: 1.15rem; display: grid; gap: .85rem; }
+.modal-note { margin: 0; font-size: var(--fs-body); color: var(--muted); }
+.modal-warn-list {
+  margin: 0; padding: .5rem .75rem .5rem 1.4rem;
+  background: #0e1527; border: 1px solid var(--border); border-radius: .5rem;
+  max-height: 14rem; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: grid; gap: .3rem; font-size: var(--fs-label); color: var(--warn);
+}
+.modal-choices { display: grid; gap: .5rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+dialog.modal input[type="file"] {
+  width: 100%; background: #0e1527; border: 1px dashed var(--border); border-radius: .5rem;
+  padding: .6rem; font-size: var(--fs-label);
+}
 
 @media (max-width: 960px) {
-  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .workspace { grid-template-columns: minmax(0, 1fr); padding: .75rem; }
   .preview { position: static; max-height: none; order: -1; }
-  .app-header { position: static; }
+  .app-header { position: static; gap: .6rem 1rem; }
+  .toolbar { width: 100%; }
+  .toolbar select { flex: 1 1 10rem; min-width: 0; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea,
+  .poke-combo input[type="text"] { font-size: 16px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  input[type="text"], input[type="number"], input[type="date"], select, textarea,
+  .poke-combo input[type="text"] { font-size: 16px; }
+  .poke-suggest li { padding: .6rem .65rem; font-size: 16px; }
 }
 @media (max-width: 560px) {
-  .grid-2, .player-grid { grid-template-columns: minmax(0, 1fr); }
-  .upload-row { grid-template-columns: 1fr; }
-  .upload-row .upload-status { grid-column: 1; }
+  .grid-2, .player-grid, .manual-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: no-preference) {
   button { transition: border-color .15s, background-color .15s; }
@@ -152,115 +217,91 @@ textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menl
 
   <header class="app-header">
     <h1>VGC Standings Generator</h1>
-    <div class="toolbar" role="toolbar" aria-label="File actions">
-      <button type="button" id="btn-sample">Load Sample (Masters Eight)</button>
-      <button type="button" id="btn-import-csv">Import CSV</button>
-      <button type="button" id="btn-export-csv">Export CSV</button>
-      <button type="button" id="btn-import-json">Import JSON</button>
-      <button type="button" id="btn-export-json">Export JSON</button>
-      <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
-      <input type="file" id="file-json" accept=".json,application/json" hidden>
+    <!-- Testing-only preset selector (uncomment to re-enable)
+    <div class="toolbar presets" role="group" aria-labelledby="presets-label">
+      <label id="presets-label" for="presets-select">Preset</label>
+      <select id="presets-select"></select>
+    </div>
+    -->
+    <div class="toolbar" role="toolbar" aria-label="Tournament actions">
+      <button type="button" id="btn-upload">Upload</button>
+      <button type="button" id="btn-export">Export</button>
+      <button type="button" id="btn-draft-new" title="Reset all fields to defaults without deleting saved drafts">Clear Fields</button>
     </div>
     <div class="toolbar drafts" role="group" aria-labelledby="drafts-label">
-      <label id="drafts-label" for="drafts-select">Saved drafts</label>
-      <select id="drafts-select"><option value="">— none —</option></select>
-      <button type="button" id="btn-draft-save">Save</button>
-      <button type="button" id="btn-draft-new">New</button>
-      <button type="button" id="btn-draft-delete" class="danger">Delete</button>
+      <label id="drafts-label" for="drafts-select">Drafts</label>
+      <select id="drafts-select" aria-label="Saved drafts"><option value="">No saved drafts</option></select>
+      <button type="button" id="btn-draft-save" title="Save current standings as a draft in this browser">Save Draft</button>
+      <button type="button" id="btn-draft-delete" class="danger" title="Delete the selected saved draft from this browser" disabled>Delete Draft</button>
     </div>
   </header>
 
   <main id="workspace" class="workspace">
     <div class="controls">
       <section class="card" aria-labelledby="h-meta">
-        <h2 id="h-meta">Tournament Metadata</h2>
+        <h2 id="h-meta">Details</h2>
         <div class="grid-2">
           <div class="field">
             <label for="f-eventType">Event type</label>
-            <p class="hint" id="h-eventType">Sets the banner title.</p>
-            <select id="f-eventType" aria-describedby="h-eventType e-eventType">
-              <option value="challenge">Challenge</option>
+            <select id="f-eventType" aria-describedby="e-eventType">
               <option value="cup">Cup</option>
-              <option value="local" selected>Local</option>
-              <option value="custom">Custom</option>
+              <option value="challenge" selected>Challenge</option>
+              <option value="other">Other</option>
             </select>
             <p class="error-msg" id="e-eventType" data-error></p>
           </div>
           <div class="field" id="wrap-customLabel" hidden>
-            <label for="f-customLabel">Custom event label</label>
-            <p class="hint" id="h-customLabel">e.g. "Regional Qualifier".</p>
-            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="h-customLabel e-customLabel">
+            <label for="f-customLabel">Event label</label>
+            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="e-customLabel">
             <p class="error-msg" id="e-customLabel" data-error></p>
           </div>
           <div class="field">
             <label for="f-location">Location</label>
-            <p class="hint" id="h-location">City, venue or store name.</p>
-            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="h-location e-location">
+            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="e-location">
             <p class="error-msg" id="e-location" data-error></p>
           </div>
           <div class="field">
             <label for="f-date">Date</label>
-            <p class="hint" id="h-date">Free text, e.g. "July 8th".</p>
-            <input id="f-date" type="text" maxlength="40" autocomplete="off" aria-describedby="h-date e-date">
+            <input id="f-date" type="date" aria-describedby="e-date">
             <p class="error-msg" id="e-date" data-error></p>
           </div>
           <div class="field">
             <label for="f-regulation">Regulation</label>
-            <p class="hint" id="h-regulation">e.g. "M-8" or "G".</p>
-            <input id="f-regulation" type="text" maxlength="20" autocomplete="off" aria-describedby="h-regulation e-regulation">
+            <select id="f-regulation" aria-describedby="e-regulation">
+              <option value="">— None —</option>
+              <option value="M-A">M-A</option>
+              <option value="M-B">M-B</option>
+              <option value="M-C" selected>M-C</option>
+              <option value="M-D">M-D</option>
+              <option value="Other">Other</option>
+            </select>
             <p class="error-msg" id="e-regulation" data-error></p>
           </div>
           <div class="field">
             <label for="f-playerCount">Player count</label>
-            <p class="hint" id="h-playerCount">Total attendees (0–9999). 0 hides it.</p>
-            <input id="f-playerCount" type="number" min="0" max="9999" step="1" inputmode="numeric" aria-describedby="h-playerCount e-playerCount">
+            <div class="stepper">
+              <button type="button" id="btn-playerCount-dec" class="stepper-btn" aria-label="Decrease player count">−</button>
+              <input id="f-playerCount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="0" aria-describedby="e-playerCount">
+              <button type="button" id="btn-playerCount-inc" class="stepper-btn" aria-label="Increase player count">+</button>
+            </div>
             <p class="error-msg" id="e-playerCount" data-error></p>
           </div>
-          <div class="field span-2">
-            <label for="f-signature">Signature text</label>
-            <p class="hint" id="h-signature">Shown at the bottom of the image. Leave blank to hide.</p>
-            <input id="f-signature" type="text" maxlength="80" autocomplete="off" aria-describedby="h-signature e-signature">
-            <p class="error-msg" id="e-signature" data-error></p>
-          </div>
         </div>
-      </section>
-
-      <section class="card" aria-labelledby="h-theme">
-        <h2 id="h-theme">Theme &amp; Assets</h2>
-        <div class="grid-2">
-          <div class="field span-2">
-            <label for="f-theme">Theme</label>
-            <p class="hint" id="h-theme-hint">Three Portland VGC themes and four procedural ones.</p>
-            <select id="f-theme" aria-describedby="h-theme-hint"></select>
-          </div>
-          <div class="field span-2">
-            <label class="check"><input type="checkbox" id="f-customColors"> Use custom colors</label>
-            <p class="hint" id="h-colors">Color 1 drives gradients' start, Color 2 the end and accent.</p>
-          </div>
-          <div class="field">
-            <label for="f-color1">Color 1</label>
-            <input id="f-color1" type="color" value="#101a2e" aria-describedby="h-colors">
-          </div>
-          <div class="field">
-            <label for="f-color2">Color 2</label>
-            <input id="f-color2" type="color" value="#d8b45a" aria-describedby="h-colors">
-          </div>
-        </div>
-        <fieldset class="uploads">
-          <legend>Custom images (optional)</legend>
-          <p class="hint">PNG, JPEG, WebP or GIF, up to 10 MB. Images stay in your browser and are not saved with drafts.</p>
-          <div id="upload-list" class="upload-list"></div>
-        </fieldset>
       </section>
 
       <section class="card" aria-labelledby="h-players">
         <div class="card-head">
           <h2 id="h-players">Standings / Players</h2>
-          <button type="button" id="btn-add-player" class="primary">Add Player</button>
+          <div class="top-cut-control">
+            <label for="f-topCut">Top Cut</label>
+            <select id="f-topCut" aria-label="Top Cut">
+              <option value="2" selected>2</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+            </select>
+          </div>
         </div>
-        <p class="hint">Team Source accepts a pokepast.es link or pasted Showdown text.</p>
         <ol id="players" class="players" aria-live="off"></ol>
-        <p id="players-empty" class="muted" hidden>No players yet. Add one to get started.</p>
       </section>
     </div>
 
@@ -275,14 +316,72 @@ textarea { resize: vertical; min-height: 4.5rem; font-family: ui-monospace, Menl
           <button type="button" id="btn-download" class="primary">Download PNG</button>
         </div>
         <div id="status" class="status" role="status"></div>
-        <ul id="warnings" class="warning-list"></ul>
-        <details id="analytics" class="analytics">
-          <summary>Tournament Analytics Preview</summary>
-          <div id="analytics-body"></div>
-        </details>
+        <ul id="warnings" class="warning-list" hidden></ul>
       </div>
     </aside>
   </main>
+
+  <dialog id="dialog-upload" class="modal" aria-labelledby="h-dialog-upload">
+    <div class="modal-card">
+      <h2 id="h-dialog-upload">Upload Standings</h2>
+      <p class="modal-note">Accepted file types: <strong>.csv</strong> or <strong>.json</strong>.</p>
+      <input type="file" id="file-upload" accept=".csv,.json,text/csv,text/comma-separated-values,application/csv,application/json">
+      <div class="modal-actions">
+        <button type="button" id="btn-upload-cancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-export" class="modal" aria-labelledby="h-dialog-export">
+    <div class="modal-card">
+      <h2 id="h-dialog-export">Export Standings</h2>
+      <p class="modal-note">Choose an export format:</p>
+      <div class="modal-choices">
+        <button type="button" id="btn-export-csv" class="primary">Export CSV (.csv)</button>
+        <button type="button" id="btn-export-json" class="primary">Export JSON (.json)</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-export-cancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-save-draft" class="modal" aria-labelledby="h-dialog-save-draft">
+    <div class="modal-card">
+      <h2 id="h-dialog-save-draft">Save Draft</h2>
+      <div class="field">
+        <label for="f-draftName">Draft name</label>
+        <input id="f-draftName" type="text" maxlength="80" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-save-draft-cancel">Cancel</button>
+        <button type="button" id="btn-save-draft-confirm" class="primary">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-clear" class="modal" aria-labelledby="h-dialog-clear">
+    <div class="modal-card">
+      <h2 id="h-dialog-clear">Clear Fields?</h2>
+      <p class="modal-note">This will reset all event details and player entries back to defaults. Your saved drafts will not be affected.</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-clear-cancel">Cancel</button>
+        <button type="button" id="btn-clear-confirm" class="danger-solid">Clear Fields</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-download-warn" class="modal" aria-labelledby="h-dialog-download-warn">
+    <div class="modal-card">
+      <h2 id="h-dialog-download-warn">Incomplete Standings</h2>
+      <p class="modal-note">Some fields are missing or incomplete:</p>
+      <ul id="download-warn-list" class="modal-warn-list"></ul>
+      <div class="modal-actions">
+        <button type="button" id="btn-download-warn-cancel">Go Back</button>
+        <button type="button" id="btn-download-warn-confirm" class="primary">Download Anyway</button>
+      </div>
+    </div>
+  </dialog>
 
   <script>
 (() => {
@@ -298,7 +397,9 @@ const MAX_PLAYER_COUNT = 9999;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 8000;
 const ALLOWED_IMAGE_TYPES = Object.freeze(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
-const EVENT_TYPES = Object.freeze(['challenge', 'cup', 'local', 'custom']);
+const EVENT_TYPES = Object.freeze(['cup', 'challenge', 'other']);
+const REGULATION_OPTIONS = Object.freeze(['M-A', 'M-B', 'M-C', 'M-D', 'Other']);
+const TOP_CUT_OPTIONS = Object.freeze([2, 4, 8]);
 
 function toStringSafe(value) {
   if (typeof value === 'string') return value;
@@ -435,8 +536,8 @@ function validateTournament(tournament) {
     errors.push('Tournament event is required.');
   } else {
     if (!EVENT_TYPES.includes(event.eventType)) errors.push(`Invalid eventType: ${String(event.eventType)}.`);
-    if (event.eventType === 'custom' && !sanitizeText(event.customEventLabel)) {
-      warnings.push('Custom event has no label.');
+    if (event.eventType === 'other' && !sanitizeText(event.customEventLabel)) {
+      warnings.push('Other event has no label.');
     }
     if (!Number.isInteger(event.playerCount) || event.playerCount < 0) errors.push('event.playerCount must be a non-negative integer.');
   }
@@ -558,6 +659,7 @@ for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) {
   entries[`Floette-${color}`] = 'floette';
   entries[`Florges-${color}`] = 'florges';
 }
+entries['Floette-Eternal'] = 'floette-eternal';
 for (const trim of ['Heart', 'Star', 'Diamond', 'Debutante', 'Matron', 'Dandy', 'La Reine', 'Kabuki', 'Pharaoh']) {
   entries[`Furfrou-${trim}`] = 'furfrou';
 }
@@ -569,6 +671,7 @@ entries['Meowstic-F-Mega'] = 'meowstic-female-mega';
 entries['Aegislash'] = 'aegislash-shield';
 entries['Aegislash-Shield'] = 'aegislash-shield';
 entries['Aegislash-Blade'] = 'aegislash-blade';
+entries['Pyroar'] = 'pyroar-male';
 for (const size of ['Small', 'Large', 'Super']) {
   entries[`Pumpkaboo-${size}`] = `pumpkaboo-${size.toLowerCase()}`;
   entries[`Gourgeist-${size}`] = `gourgeist-${size.toLowerCase()}`;
@@ -629,8 +732,8 @@ entries["Farfetch'd-Galar"] = 'farfetchd-galar';
 entries['Urshifu'] = 'urshifu-single-strike';
 entries['Urshifu-Single-Strike'] = 'urshifu-single-strike';
 entries['Urshifu-Rapid-Strike'] = 'urshifu-rapid-strike';
-entries['Calyrex-Ice'] = 'calyrex-ice-rider';
-entries['Calyrex-Shadow'] = 'calyrex-shadow-rider';
+entries['Calyrex-Ice'] = 'calyrex-ice';
+entries['Calyrex-Shadow'] = 'calyrex-shadow';
 entries['Zacian'] = 'zacian';
 entries['Zacian-Crowned'] = 'zacian-crowned';
 entries['Zamazenta'] = 'zamazenta';
@@ -661,6 +764,7 @@ for (const name of ['Great Tusk', 'Scream Tail', 'Brute Bonnet', 'Flutter Mane',
 }
 entries['Silther Wing'] = 'slither-wing'; // legacy typo kept as an alias
 entries['Poltchageist-Artisan'] = 'poltchageist';
+entries['Sinistcha-Unremarkable'] = 'sinistcha';
 entries['Sinistcha-Masterpiece'] = 'sinistcha';
 entries['Ogerpon'] = 'ogerpon';
 for (const mask of ['Wellspring', 'Hearthflame', 'Cornerstone']) {
@@ -745,6 +849,199 @@ function normalizePokemonSlug(rawName) {
   return lookupSpecialAdjustment(species) ?? defaultSlug(species);
 }
 
+const SLUG_TO_DISPLAY = new Map();
+for (const [displayName, slug] of Object.entries(SPECIAL_POKEMON_URL_ADJUSTMENTS)) {
+  // Prefer clean ASCII/standard names (skip legacy typo/mojibake/NFD aliases)
+  if (displayName === 'Silther Wing' || displayName.includes('\u00e2\u0080') || displayName.includes('\u0301') || displayName.includes('\u2019')) {
+    continue;
+  }
+  if (!SLUG_TO_DISPLAY.has(slug)) SLUG_TO_DISPLAY.set(slug, displayName);
+}
+
+/** Converts a PokeAPI slug like "flutter-mane" or "arcanine-hisui" into a readable display name. */
+function formatSlugDisplayName(slug) {
+  const clean = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+  if (!clean) return '';
+  if (SLUG_TO_DISPLAY.has(clean)) return SLUG_TO_DISPLAY.get(clean);
+  return clean
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('-');
+}
+
+/** Builds a deduplicated, searchable Pokémon catalog from raw slugs and/or display names. */
+function buildPokemonCatalog(rawItems = []) {
+  const bySlug = new Map();
+  const addEntry = (name, slug) => {
+    const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+    if (!cleanSlug || bySlug.has(cleanSlug)) return;
+    const display = name || formatSlugDisplayName(cleanSlug);
+    const norm = lookupKey(display).replace(/[-_.'’:\s]+/g, ' ').trim();
+    const compact = norm.replace(/\s+/g, '');
+    bySlug.set(cleanSlug, {
+      name: display,
+      slug: cleanSlug,
+      norm,
+      compact,
+      tokens: norm ? norm.split(' ') : [],
+    });
+  };
+
+  // Seed with canonical special-adjustment names first
+  for (const [slug, display] of SLUG_TO_DISPLAY.entries()) {
+    addEntry(display, slug);
+  }
+  // Merge additional slugs or display names (e.g. from PokéAPI or presets)
+  for (const item of Array.isArray(rawItems) ? rawItems : []) {
+    if (typeof item === 'string' && item.trim()) {
+      const slug = normalizePokemonSlug(item);
+      addEntry(SLUG_TO_DISPLAY.get(slug) || formatSlugDisplayName(slug), slug);
+    } else if (item && typeof item === 'object' && item.slug) {
+      addEntry(item.name || SLUG_TO_DISPLAY.get(item.slug) || formatSlugDisplayName(item.slug), item.slug);
+    }
+  }
+  return [...bySlug.values()];
+}
+
+function boundedLevenshtein(a, b, maxDist = 2) {
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > maxDist) return maxDist + 1;
+  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
+  let curr = new Array(lb + 1);
+  for (let i = 1; i <= la; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    const ca = a.charCodeAt(i - 1);
+    for (let j = 1; j <= lb; j++) {
+      const cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
+      const v = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      curr[j] = v;
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > maxDist) return maxDist + 1;
+    [prev, curr] = [curr, prev];
+  }
+  return prev[lb];
+}
+
+function scoreSubsequence(q, target) {
+  let qi = 0;
+  let streak = 0;
+  let score = 0;
+  let firstIdx = -1;
+  for (let ti = 0; ti < target.length && qi < q.length; ti++) {
+    if (target[ti] === q[qi]) {
+      if (firstIdx === -1) firstIdx = ti;
+      streak += 1;
+      score += 10 + streak * 4;
+      if (ti === 0) score += 15;
+      qi += 1;
+    } else {
+      streak = 0;
+    }
+  }
+  if (qi < q.length) return -1;
+  return 260 + score - firstIdx * 2 - Math.max(0, target.length - q.length);
+}
+
+/**
+ * Fuzzy-searches a Pokémon catalog (handles prefixes, token matches, subsequences,
+ * and typos up to edit distance 2). Returns up to `limit` { name, slug } entries.
+ */
+function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
+  const qNorm = lookupKey(typeof query === 'string' ? query : '').replace(/[-_.'’:\s]+/g, ' ').trim();
+  const qCompact = qNorm.replace(/\s+/g, '');
+  if (!qCompact || !Array.isArray(catalog) || catalog.length === 0) return [];
+
+  const maxResults = Math.max(1, Math.min(20, Math.floor(Number(limit) || 6)));
+  const scored = [];
+
+  for (const item of catalog) {
+    if (!item || !item.compact) continue;
+    const { norm, compact, tokens, slug } = item;
+    // Slight tie-break penalty for niche/totem forms so standard forms appear first
+    const nichePenalty = /-(totem|starter|busted|gulping|gorging|limited-build|sprinting-build|swimming-build|gliding-build|low-power-mode|drive-mode|aquatic-mode|glide-mode)/.test(slug) ? 80 : 0;
+    const lenPenalty = Math.min(40, compact.length * 0.5);
+    let score = -1;
+
+    if (norm === qNorm || compact === qCompact) {
+      score = 1000;
+    } else if (norm.startsWith(qNorm) || compact.startsWith(qCompact)) {
+      score = 820 - lenPenalty;
+    } else if (tokens.some((t) => t.startsWith(qCompact))) {
+      score = 680 - lenPenalty;
+    } else {
+      const idx = compact.indexOf(qCompact);
+      if (idx !== -1) {
+        score = 540 - idx * 4 - lenPenalty;
+      } else {
+        const sub = scoreSubsequence(qCompact, compact);
+        if (sub > 0) {
+          score = sub;
+        } else if (qCompact.length >= 3) {
+          const maxDist = qCompact.length >= 5 ? 2 : 1;
+          const distFull = boundedLevenshtein(qCompact, compact, maxDist);
+          const distExactPrefix = compact.length >= qCompact.length
+            ? boundedLevenshtein(qCompact, compact.slice(0, qCompact.length), maxDist)
+            : maxDist + 1;
+          const distPlusOnePrefix = compact.length > qCompact.length
+            ? boundedLevenshtein(qCompact, compact.slice(0, qCompact.length + 1), maxDist)
+            : maxDist + 1;
+          const bestDist = Math.min(distFull, distExactPrefix, distPlusOnePrefix);
+          if (bestDist <= maxDist) {
+            score = 240 - bestDist * 55 - lenPenalty;
+          }
+        }
+      }
+    }
+
+    if (score > 0) {
+      scored.push({ name: item.name, slug: item.slug, score: score - nichePenalty });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name));
+  return scored.slice(0, maxResults).map(({ name, slug }) => ({ name, slug }));
+}
+
+// --- src/core/regulations.js ---
+// Legal Pokémon slug sets per Pokémon Champions VGC Regulation (sourced from Showdown/Serebii).
+// M-D mirrors M-C until officially announced.
+
+const REG_MA_SLUGS = Object.freeze(["abomasnow","abomasnow-mega","absol","absol-mega","aegislash-shield","aerodactyl","aerodactyl-mega","aggron","aggron-mega","alakazam","alakazam-mega","alcremie","altaria","altaria-mega","ampharos","ampharos-mega","appletun","araquanid","arbok","arcanine","arcanine-hisui","archaludon","ariados","armarouge","aromatisse","audino","audino-mega","aurorus","avalugg","avalugg-hisui","azumarill","banette","banette-mega","basculegion-female","basculegion-male","bastiodon","beartic","beedrill","beedrill-mega","bellibolt","blastoise","blastoise-mega","camerupt","camerupt-mega","castform","ceruledge","chandelure","chandelure-mega","charizard","charizard-mega-x","charizard-mega-y","chesnaught","chesnaught-mega","chimecho","chimecho-mega","clawitzer","clefable","clefable-mega","cofagrigus","conkeldurr","corviknight","crabominable","crabominable-mega","decidueye","decidueye-hisui","dedenne","delphox","delphox-mega","diggersby","ditto","dragapult","dragonite","dragonite-mega","drampa","drampa-mega","emboar","emboar-mega","emolga","empoleon","espathra","espeon","excadrill","excadrill-mega","farigiraf","feraligatr","feraligatr-mega","flapple","flareon","floette-eternal","florges","forretress","froslass","froslass-mega","furfrou","gallade","gallade-mega","garbodor","garchomp","garchomp-mega","gardevoir","gardevoir-mega","garganacl","gengar","gengar-mega","glaceon","glalie","glalie-mega","glimmora","glimmora-mega","gliscor","golurk","golurk-mega","goodra","goodra-hisui","gourgeist-average","gourgeist-large","gourgeist-small","gourgeist-super","greninja","greninja-mega","gyarados","gyarados-mega","hatterene","hawlucha","hawlucha-mega","heliolisk","heracross","heracross-mega","hippowdon","houndoom","houndoom-mega","hydrapple","hydreigon","incineroar","infernape","jolteon","kangaskhan","kangaskhan-mega","kingambit","kleavor","klefki","kommo-o","krookodile","leafeon","liepard","lopunny","lopunny-mega","lucario","lucario-mega","luxray","lycanroc-dusk","lycanroc-midday","lycanroc-midnight","machamp","mamoswine","manectric","manectric-mega","maushold-family-of-three","medicham","medicham-mega","meganium","meganium-mega","meowscarada","meowstic-male","milotic","mimikyu-disguised","morpeko-full-belly","mr-rime","mudsdale","ninetales","ninetales-alola","noivern","oranguru","orthworm","palafin-hero","pangoro","passimian","pelipper","pidgeot","pidgeot-mega","pikachu","pinsir","pinsir-mega","politoed","polteageist","primarina","quaquaval","raichu","raichu-alola","rampardos","reuniclus","rhyperior","roserade","rotom","rotom-fan","rotom-frost","rotom-heat","rotom-mow","rotom-wash","runerigus","sableye","sableye-mega","salazzle","samurott","samurott-hisui","sandaconda","scizor","scizor-mega","scovillain","scovillain-mega","serperior","sharpedo","sharpedo-mega","simipour","simisage","simisear","sinistcha","skarmory","skarmory-mega","skeledirge","slowbro","slowbro-galar","slowbro-mega","slowking","slowking-galar","slurpuff","sneasler","snorlax","spiritomb","starmie","starmie-mega","steelix","steelix-mega","stunfisk","stunfisk-galar","sylveon","talonflame","tauros","tauros-paldea-aqua-breed","tauros-paldea-blaze-breed","tauros-paldea-combat-breed","tinkaton","torkoal","torterra","toucannon","toxapex","toxicroak","trevenant","tsareena","typhlosion","typhlosion-hisui","tyranitar","tyranitar-mega","tyrantrum","umbreon","vanilluxe","vaporeon","venusaur","venusaur-mega","victreebel","victreebel-mega","vivillon","volcarona","watchog","weavile","whimsicott","wyrdeer","zoroark","zoroark-hisui"]);
+const REG_MB_ADDED = Object.freeze(["annihilape","barbaracle","barbaracle-mega","blaziken","blaziken-mega","dragalge","dragalge-mega","eelektross","eelektross-mega","falinks","falinks-mega","gholdengo","grimmsnarl","houndstone","malamar","malamar-mega","mawile","mawile-mega","metagross","metagross-mega","musharna","overqwil","pyroar-male","pyroar-mega","qwilfish","raichu-mega-x","raichu-mega-y","sceptile","sceptile-mega","scolipede","scolipede-mega","scrafty","scrafty-mega","staraptor","staraptor-mega","swampert","swampert-mega","vileplume"]);
+const REG_MC_ADDED = Object.freeze(["absol-mega-z","arboliva","baxcalibur","baxcalibur-mega","cinderace","farfetchd","garchomp-mega-z","gogoat","golisopod","golisopod-mega","grapploct","indeedee-female","indeedee-male","inteleon","lucario-mega-z","mabosstiff","mr-mime","pawmot","perrserker","persian","persian-alola","pincurchin","rillaboom","salamence","salamence-mega","sirfetchd","squawkabilly-blue-plumage","squawkabilly-green-plumage","squawkabilly-white-plumage","squawkabilly-yellow-plumage","swalot","thievul","toxtricity-amped","toxtricity-low-key","wigglytuff"]);
+
+const MA_SET = new Set(REG_MA_SLUGS);
+const MB_SET = new Set([...REG_MA_SLUGS, ...REG_MB_ADDED]);
+const MC_SET = new Set([...MB_SET, ...REG_MC_ADDED]);
+const REGULATION_LEGAL_SLUGS = Object.freeze({
+  "M-A": MA_SET,
+  "M-B": MB_SET,
+  "M-C": MC_SET,
+  "M-D": MC_SET,
+});
+
+/**
+ * Returns the legal slug Set for a regulation (e.g. "M-A", "M-B", "M-C", "M-D"),
+ * or null when unrestricted ("Other" or unset).
+ */
+function getRegulationLegalSet(regulation) {
+  const key = typeof regulation === "string" ? regulation.trim().toUpperCase() : "";
+  if (!key || key === "OTHER") return null;
+  return REGULATION_LEGAL_SLUGS[key] ?? null;
+}
+
+/** Filters a Pokémon catalog to the given regulation, or returns full catalog for Other/unset. */
+function filterCatalogByRegulation(catalog, regulation) {
+  if (!Array.isArray(catalog)) return [];
+  const allowed = getRegulationLegalSet(regulation);
+  if (!allowed) return catalog;
+  return catalog.filter((item) => item && allowed.has(item.slug));
+}
+
 // --- src/core/schema.js ---
 const SCHEMA_VERSION = 1;
 const DEFAULT_SIGNATURE = 'Created by JoshBell302 on GitHub';
@@ -827,14 +1124,17 @@ function createStandingEntry(input = {}) {
     local: sanitizeText(src.local, { maxLength: 100 }),
     teamSource: sanitizeTeamSource(src.teamSource),
     pokemon: rawPokemon.slice(0, MAX_POKEMON_PER_TEAM).map(createPokemonSet),
+    redactName: src.redactName === true,
+    redactTeam: src.redactTeam === true,
     warnings,
   };
 }
 
 function normalizeEvent(input) {
   const src = isPlainObject(input) ? input : {};
+  const rawType = src.eventType === 'custom' || src.eventType === 'local' ? 'other' : src.eventType;
   return {
-    eventType: EVENT_TYPES.includes(src.eventType) ? src.eventType : 'local',
+    eventType: EVENT_TYPES.includes(rawType) ? rawType : 'cup',
     customEventLabel: sanitizeText(src.customEventLabel, { maxLength: 60 }),
     location: sanitizeText(src.location, { maxLength: 80 }),
     date: sanitizeText(src.date, { maxLength: 40 }),
@@ -874,6 +1174,7 @@ function createEmptyTournament(overrides = {}) {
   return {
     schemaVersion: SCHEMA_VERSION,
     id: sanitizeText(src.id, { maxLength: 80 }) || generateId('tournament'),
+    draftName: sanitizeText(src.draftName, { maxLength: 80 }),
     createdAt: isoOrNow(src.createdAt, now),
     updatedAt: isoOrNow(src.updatedAt, now),
     event: normalizeEvent(src.event),
@@ -913,27 +1214,52 @@ function formatEventTitle(event) {
   let label;
   switch (src.eventType) {
     case 'challenge':
-      label = 'VG LEAGUE CHALLENGE';
+      label = 'LEAGUE CHALLENGE';
       break;
     case 'cup':
-      label = 'VG LEAGUE CUP';
+      label = 'LEAGUE CUP';
       break;
+    case 'other':
     case 'custom':
       label = sanitizeText(src.customEventLabel, { maxLength: 60 }).toUpperCase() || 'EVENT';
       break;
     default:
-      label = 'VG LEAGUE LOCAL';
+      label = 'EVENT';
   }
   const location = sanitizeText(src.location, { maxLength: 80 }).toUpperCase();
   return location ? `${label} • ${location}` : label;
 }
+
+const MONTH_NAMES = Object.freeze([
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]);
+
+/** Formats ISO YYYY-MM-DD dates consistently (e.g. "July 8, 2026"); leaves legacy text as-is. */
+function formatEventDate(value) {
+  const text = sanitizeText(value, { maxLength: 40 });
+  if (!text) return '';
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return text;
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return text;
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return text;
+  }
+  return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
+}
 function formatEventSubtitle(event) {
   const src = isPlainObject(event) ? event : {};
   const parts = [];
-  const date = sanitizeText(src.date, { maxLength: 40 });
+  const date = formatEventDate(src.date);
   if (date) parts.push(date);
   const regulation = sanitizeText(src.regulation, { maxLength: 20 });
-  if (regulation) parts.push(/^regulation\b/i.test(regulation) ? regulation : `Regulation ${regulation}`);
+  if (regulation && regulation.toLowerCase() !== 'other') {
+    parts.push(/^regulation\b/i.test(regulation) ? regulation : `Regulation ${regulation}`);
+  }
   const count = sanitizePlayerCount(src.playerCount);
   if (count > 0) parts.push(`${count} ${count === 1 ? 'Player' : 'Players'}`);
   return parts.join(' • ');
@@ -1232,7 +1558,7 @@ function parseStandingsCsv(csvText) {
     const challenge = isTruthyCell(get(['challenge']));
     const cup = isTruthyCell(get(['cup']));
     event = {
-      eventType: challenge && !cup ? 'challenge' : cup && !challenge ? 'cup' : 'local',
+      eventType: challenge && !cup ? 'challenge' : cup && !challenge ? 'cup' : 'other',
       location: get(['location']),
       date: get(['date']),
       regulation: get(['regulation', 'reg']),
@@ -1422,8 +1748,8 @@ function computeRhombusGeometry(imageWidth = CANVAS_WIDTH, headerHeight = HEADER
   const w = Math.max(1, num(imageWidth, CANVAS_WIDTH));
   const h = Math.max(0, num(headerHeight, HEADER_HEIGHT));
   const width = Math.round(w * RHOMBUS_WIDTH_RATIO);
-  const bottomY = h + RHOMBUS_DRAG_DOWN;
-  const topY = bottomY - RHOMBUS_HEIGHT;
+  const topY = h - RHOMBUS_HEIGHT / 2;
+  const bottomY = h + RHOMBUS_HEIGHT / 2;
   const cx = w / 2;
   const topHalf = Math.max(0, (width - RHOMBUS_WIDTH_DIFFERENCE) / 2);
   const bottomHalf = width / 2;
@@ -1445,38 +1771,37 @@ function computeRhombusGeometry(imageWidth = CANVAS_WIDTH, headerHeight = HEADER
 function computeLayout({
   playerCount,
   imageWidth = CANVAS_WIDTH,
-  baseHeight = BASE_CANVAS_HEIGHT,
   headerHeight = HEADER_HEIGHT,
   hasSignature = true,
 } = {}) {
   const count = Math.max(0, Math.floor(num(playerCount, 0)));
   const canvasWidth = Math.max(1, num(imageWidth, CANVAS_WIDTH));
-  const baseH = Math.max(1, num(baseHeight, BASE_CANVAS_HEIGHT));
-  const contentTop = Math.max(0, num(headerHeight, HEADER_HEIGHT)) + SEPARATOR_HEIGHT + STANDINGS_GAP;
-  const reserved = (hasSignature ? SIGNATURE_RESERVED_HEIGHT : 0) + STANDINGS_GAP;
+  const hdrH = Math.max(0, num(headerHeight, HEADER_HEIGHT));
+  const bannerBottom = hdrH + RHOMBUS_HEIGHT / 2;
+  const verticalPad = hasSignature ? SIGNATURE_RESERVED_HEIGHT + 20 : STANDINGS_GAP + 10;
 
   if (count === 0) {
+    const emptyHeight = 200;
+    const contentTop = Math.round(bannerBottom + verticalPad);
+    const contentBottom = contentTop + emptyHeight;
+    const canvasHeight = Math.round(contentBottom + verticalPad);
     return {
-      canvasWidth, canvasHeight: baseH, columns: 0, rows: 0, cardWidth: 0, cardHeight: 0,
-      contentTop, contentBottom: Math.max(contentTop, baseH - reserved), cards: [],
+      canvasWidth, canvasHeight, columns: 0, rows: 0, cardWidth: 0, cardHeight: 0,
+      contentTop, contentBottom, cards: [],
     };
   }
 
   const columns = count <= 2 ? 1 : 2;
   const rows = Math.ceil(count / columns);
-  const margin = columns === 1 ? 2 * STANDINGS_GAP : STANDINGS_GAP;
-  const cardWidth = Math.max(1, (canvasWidth - 2 * margin - (columns - 1) * STANDINGS_GAP) / columns);
+  const cardWidth = Math.max(1, (canvasWidth - 3 * STANDINGS_GAP) / 2);
+  const margin = columns === 1 ? (canvasWidth - cardWidth) / 2 : STANDINGS_GAP;
+  const cardHeight = STANDINGS_MAX_CARD_HEIGHT;
+  const cardsBlockHeight = rows * cardHeight + (rows - 1) * STANDINGS_GAP;
 
-  const available = baseH - contentTop - reserved;
-  let cardHeight = Math.min(STANDINGS_MAX_CARD_HEIGHT, (available - (rows - 1) * STANDINGS_GAP) / rows);
-  let canvasHeight = baseH;
-  if (cardHeight < STANDINGS_MIN_CARD_HEIGHT) {
-    cardHeight = STANDINGS_MIN_CARD_HEIGHT;
-    canvasHeight = Math.ceil(contentTop + rows * cardHeight + (rows - 1) * STANDINGS_GAP + reserved);
-  }
-  cardHeight = Math.floor(cardHeight);
+  const contentTop = Math.round(bannerBottom + verticalPad);
+  const contentBottom = contentTop + cardsBlockHeight;
+  const canvasHeight = Math.round(contentBottom + verticalPad);
 
-  const contentBottom = contentTop + rows * cardHeight + (rows - 1) * STANDINGS_GAP;
   const cards = [];
   for (let i = 0; i < count; i++) {
     const row = Math.floor(i / columns);
@@ -1501,12 +1826,15 @@ function computeSpriteSlots(cardBounds, topSlotHeight, pokemonCount) {
   const width = num(cardBounds.width, 0);
   const height = num(cardBounds.height, 0);
   const pad = 10;
+  const topPad = 6;
+  const bottomPad = 8;
   const innerW = width - 2 * pad;
-  const availH = height - Math.max(0, num(topSlotHeight, 0)) - pad;
+  const areaTop = y + Math.max(0, num(topSlotHeight, 0)) + topPad;
+  const availH = y + height - bottomPad - areaTop;
   const slotWidth = innerW / n;
   const size = Math.floor(Math.min(slotWidth, availH));
   if (!(size > 0) || !(slotWidth > 0)) return [];
-  const slotY = y + height - pad - size;
+  const slotY = areaTop + Math.floor((availH - size) / 2);
   return Array.from({ length: n }, (_, i) => ({
     centerX: x + pad + slotWidth * (i + 0.5),
     y: slotY,
@@ -1515,33 +1843,252 @@ function computeSpriteSlots(cardBounds, topSlotHeight, pokemonCount) {
   }));
 }
 
+const SPRITE_ROW_DEFAULTS = Object.freeze({
+  minGap: 22,
+  maxGap: 52,
+  minClearance: 12,
+  padX: 22,
+  topPad: 14,
+  bottomPad: 14,
+  maxAspect: 1.35,
+  heightFill: 0.88,
+});
+
+function measureBaseSprites(items, availH, maxAspect, heightFill) {
+  const targetH = availH * heightFill;
+  const maxSpriteW = targetH * maxAspect;
+  return items.map((it) => {
+    const sw = num(it?.sw, 0) > 0 ? it.sw : 100;
+    const sh = num(it?.sh, 0) > 0 ? it.sh : 100;
+    const scale = Math.min(targetH / sh, maxSpriteW / sw);
+    const coreLeft = Number.isFinite(it?.coreLeft) ? Math.max(0, Math.min(0.45, it.coreLeft)) : 0;
+    const coreRight = Number.isFinite(it?.coreRight) ? Math.max(0.55, Math.min(1, it.coreRight)) : 1;
+    return {
+      w: sw * scale,
+      h: sh * scale,
+      coreLeft,
+      coreRight,
+      leftProfile: Array.isArray(it?.leftProfile) ? it.leftProfile : null,
+      rightProfile: Array.isArray(it?.rightProfile) ? it.rightProfile : null,
+    };
+  });
+}
+
+function computePairCushion(a, b, wA, hA, yA, wB, hB, yB) {
+  if (!a.rightProfile || !b.leftProfile || a.rightProfile.length === 0 || b.leftProfile.length === 0) {
+    return 0;
+  }
+  const overlapTop = Math.max(yA, yB);
+  const overlapBot = Math.min(yA + hA, yB + hB);
+  if (overlapBot <= overlapTop) return wA + wB;
+
+  const bandsA = a.rightProfile.length;
+  const bandsB = b.leftProfile.length;
+  const samples = Math.max(bandsA, bandsB);
+  let minAir = Infinity;
+
+  for (let s = 0; s < samples; s++) {
+    const y = overlapTop + ((s + 0.5) / samples) * (overlapBot - overlapTop);
+    const idxA = Math.min(bandsA - 1, Math.max(0, Math.floor(((y - yA) / hA) * bandsA)));
+    const idxB = Math.min(bandsB - 1, Math.max(0, Math.floor(((y - yB) / hB) * bandsB)));
+
+    // Check ±1 vertical band neighborhood so diagonally close tips keep clearance too
+    let rA = 0;
+    for (let d = -1; d <= 1; d++) {
+      const k = idxA + d;
+      if (k >= 0 && k < bandsA && a.rightProfile[k] > rA) rA = a.rightProfile[k];
+    }
+    let lB = 1;
+    for (let d = -1; d <= 1; d++) {
+      const k = idxB + d;
+      if (k >= 0 && k < bandsB && b.leftProfile[k] < lB) lB = b.leftProfile[k];
+    }
+
+    if (rA > 0 && lB < 1) {
+      const air = (1 - rA) * wA + lB * wB;
+      if (air < minAir) minAir = air;
+    }
+  }
+
+  return Number.isFinite(minAir) ? minAir : 0;
+}
+
+function layoutRowAtScale(base, availH, areaTop, shrink, optGap, minClearance) {
+  const sized = base.map((b) => {
+    const w = b.w * shrink;
+    const h = b.h * shrink;
+    const y = areaTop + (availH - h) / 2;
+    return { ...b, w, h, y };
+  });
+  const gaps = [];
+  let totalW = 0;
+  for (let i = 0; i < sized.length; i++) {
+    totalW += sized[i].w;
+    if (i < sized.length - 1) {
+      const a = sized[i];
+      const b = sized[i + 1];
+      const leftTail = (1 - a.coreRight) * a.w;
+      const rightTail = b.coreLeft * b.w;
+      const opticalGap = optGap - leftTail - rightTail;
+      const cushion = computePairCushion(a, b, a.w, a.h, a.y, b.w, b.h, b.y);
+      const safeGap = minClearance - cushion;
+      const g = Math.max(safeGap, opticalGap);
+      gaps.push(g);
+      totalW += g;
+    }
+  }
+  return { sized, gaps, totalW };
+}
+
+/**
+ * Computes a single shared scale multiplier (<= 1) across all cards in the graphic
+ * so the same Pokémon sprite renders at the exact same size on every card.
+ * cardRows: [{ cardBounds, topSlotHeight, items: [{ sw, sh, coreLeft?, coreRight?, leftProfile?, rightProfile? }] }]
+ */
+function computeGlobalSpriteScale(cardRows, opts = {}) {
+  if (!Array.isArray(cardRows) || cardRows.length === 0) return 1;
+  const { minGap, minClearance, padX, topPad, bottomPad, maxAspect, heightFill } = { ...SPRITE_ROW_DEFAULTS, ...opts };
+  let globalShrink = 1;
+  for (const row of cardRows) {
+    const items = row?.items;
+    const b = row?.cardBounds;
+    if (!b || !Array.isArray(items) || items.length === 0) continue;
+    const innerW = num(b.width, 0) - 2 * padX;
+    const availH = num(b.height, 0) - Math.max(0, num(row.topSlotHeight, 0)) - topPad - bottomPad;
+    if (!(innerW > 0) || !(availH > 0)) continue;
+    const base = measureBaseSprites(items, availH, maxAspect, heightFill);
+    const areaTop = num(b.y ?? b.top, 0) + Math.max(0, num(row.topSlotHeight, 0)) + topPad;
+    if (layoutRowAtScale(base, availH, areaTop, globalShrink, minGap, minClearance).totalW <= innerW) {
+      continue;
+    }
+    let lo = 0.1;
+    let hi = globalShrink;
+    for (let iter = 0; iter < 14; iter++) {
+      const mid = (lo + hi) / 2;
+      if (layoutRowAtScale(base, availH, areaTop, mid, minGap, minClearance).totalW <= innerW) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    globalShrink = Math.min(globalShrink, lo);
+  }
+  return globalShrink;
+}
+
+/**
+ * Dynamically sizes and positions sprites from their tight (trimmed) silhouettes
+ * and optical body bounds so that all sprites share a balanced visual scale and
+ * have EQUAL optical horizontal spacing between every adjacent pair without touching.
+ * Pass `scaleMultiplier` from computeGlobalSpriteScale() to keep sizes identical across all cards.
+ */
+function computeEqualGapSpriteRow(cardBounds, topSlotHeight, items, opts = {}) {
+  if (!cardBounds || !Array.isArray(items) || items.length === 0) return [];
+  const { minGap, maxGap, minClearance, padX, topPad, bottomPad, maxAspect, heightFill, scaleMultiplier } = {
+    ...SPRITE_ROW_DEFAULTS,
+    ...opts,
+  };
+  const x = num(cardBounds.x ?? cardBounds.left, 0);
+  const y = num(cardBounds.y ?? cardBounds.top, 0);
+  const width = num(cardBounds.width, 0);
+  const height = num(cardBounds.height, 0);
+  const innerW = width - 2 * padX;
+  const areaTop = y + Math.max(0, num(topSlotHeight, 0)) + topPad;
+  const availH = y + height - bottomPad - areaTop;
+  if (!(innerW > 0) || !(availH > 0)) return [];
+
+  const n = items.length;
+  const base = measureBaseSprites(items, availH, maxAspect, heightFill);
+  let shrink = Number.isFinite(scaleMultiplier) && scaleMultiplier > 0 ? Math.min(1, scaleMultiplier) : 1;
+
+  // Ensure row fits at minGap even if caller didn't pre-compute global scale
+  if (layoutRowAtScale(base, availH, areaTop, shrink, minGap, minClearance).totalW > innerW) {
+    let lo = 0.1;
+    let hi = shrink;
+    for (let iter = 0; iter < 14; iter++) {
+      const mid = (lo + hi) / 2;
+      if (layoutRowAtScale(base, availH, areaTop, mid, minGap, minClearance).totalW <= innerW) lo = mid;
+      else hi = mid;
+    }
+    shrink = lo;
+  }
+
+  // Expand optical gap evenly up to maxGap to fill available width
+  let optGap = minGap;
+  if (n > 1) {
+    if (layoutRowAtScale(base, availH, areaTop, shrink, maxGap, minClearance).totalW <= innerW) {
+      optGap = maxGap;
+    } else {
+      let lo = minGap;
+      let hi = maxGap;
+      for (let iter = 0; iter < 14; iter++) {
+        const mid = (lo + hi) / 2;
+        if (layoutRowAtScale(base, availH, areaTop, shrink, mid, minClearance).totalW <= innerW) lo = mid;
+        else hi = mid;
+      }
+      optGap = lo;
+    }
+  }
+
+  const { sized, gaps, totalW } = layoutRowAtScale(base, availH, areaTop, shrink, optGap, minClearance);
+
+  // Center visually by core body bounds (clamped so actual pixels stay within padX)
+  const firstCoreInset = sized[0].coreLeft * sized[0].w;
+  const lastCoreInset = (1 - sized[n - 1].coreRight) * sized[n - 1].w;
+  const coreCenterOffset = (lastCoreInset - firstCoreInset) / 2;
+  const minX = x + padX;
+  const maxX = x + width - padX - totalW;
+  let curX = x + (width - totalW) / 2 + coreCenterOffset;
+  if (maxX >= minX) curX = Math.max(minX, Math.min(maxX, curX));
+  else curX = x + (width - totalW) / 2;
+
+  return sized.map((s, idx) => {
+    const dx = curX;
+    const gap = idx < gaps.length ? gaps[idx] : 0;
+    curX += s.w + gap;
+    return {
+      x: dx,
+      y: s.y,
+      width: s.w,
+      height: s.h,
+      centerX: dx + s.w / 2,
+      size: Math.min(s.w, s.h),
+      slotWidth: s.w,
+      gap,
+      optGap,
+    };
+  });
+}
+
 // --- src/adapters/storage.js ---
 /** Store interface: async list(), get(id), save(tournament), delete(id), clear(). */
 class MemoryTournamentStore {
-  #items = new Map();
+  constructor() {
+    this._items = new Map();
+  }
 
   async list() {
-    return [...this.#items.values()].map((s) => deserializeTournament(s));
+    return [...this._items.values()].map((s) => deserializeTournament(s));
   }
 
   async get(id) {
-    const raw = this.#items.get(id);
+    const raw = this._items.get(id);
     return raw ? deserializeTournament(raw) : null;
   }
 
   async save(tournament) {
     const raw = serializeTournament(tournament);
     const record = deserializeTournament(raw);
-    this.#items.set(record.id, raw);
+    this._items.set(record.id, raw);
     return record;
   }
 
   async delete(id) {
-    return this.#items.delete(id);
+    return this._items.delete(id);
   }
 
   async clear() {
-    this.#items.clear();
+    this._items.clear();
   }
 }
 class LocalStorageTournamentStore {
@@ -1559,7 +2106,7 @@ class LocalStorageTournamentStore {
     }
   }
 
-  #keys() {
+  _keys() {
     const s = this.storage;
     if (!s) return [];
     const keys = [];
@@ -1574,7 +2121,7 @@ class LocalStorageTournamentStore {
     return keys;
   }
 
-  #read(key) {
+  _read(key) {
     try {
       const raw = this.storage?.getItem(key);
       return raw ? deserializeTournament(raw) : null;
@@ -1584,11 +2131,11 @@ class LocalStorageTournamentStore {
   }
 
   async list() {
-    return this.#keys().map((k) => this.#read(k)).filter(Boolean);
+    return this._keys().map((k) => this._read(k)).filter(Boolean);
   }
 
   async get(id) {
-    return this.#read(this.prefix + id);
+    return this._read(this.prefix + id);
   }
 
   /** Returns the saved record, or null if storage is unavailable or full. */
@@ -1618,7 +2165,7 @@ class LocalStorageTournamentStore {
 
   async clear() {
     try {
-      for (const k of this.#keys()) this.storage.removeItem(k);
+      for (const k of this._keys()) this.storage.removeItem(k);
     } catch {
       /* ignore */
     }
@@ -1633,11 +2180,33 @@ class PokeApiClient {
     this.pokeApiBase = String(pokeApiBase).replace(/\/+$/, '');
     this.pasteCache = new Map();
     this.spriteCache = new Map();
+    this.catalogPromise = null;
   }
 
   clearCache() {
     this.pasteCache.clear();
     this.spriteCache.clear();
+    this.catalogPromise = null;
+  }
+
+  /** Fetches the full PokéAPI Pokémon slug list once and caches it. Never throws. */
+  async fetchPokemonCatalog() {
+    if (this.catalogPromise) return this.catalogPromise;
+    this.catalogPromise = (async () => {
+      try {
+        const res = await this.fetchWithTimeout(`${this.pokeApiBase}/pokemon?limit=2000`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data?.results)
+          ? data.results.map((r) => (typeof r?.name === 'string' ? r.name : '')).filter(Boolean)
+          : [];
+      } catch {
+        return [];
+      }
+    })();
+    const list = await this.catalogPromise;
+    if (list.length === 0) this.catalogPromise = null;
+    return list;
   }
 
   async fetchWithTimeout(url) {
@@ -1676,12 +2245,12 @@ class PokeApiClient {
     if (!clean) return { url: null, warning: 'Missing Pokémon name.' };
     const cacheKey = `${clean}|${shiny ? 's' : 'n'}`;
     if (this.spriteCache.has(cacheKey)) return this.spriteCache.get(cacheKey);
-    const promise = this.#loadSprite(clean, shiny);
+    const promise = this._loadSprite(clean, shiny);
     this.spriteCache.set(cacheKey, promise);
     return promise;
   }
 
-  async #loadSprite(slug, shiny) {
+  async _loadSprite(slug, shiny) {
     try {
       const res = await this.fetchWithTimeout(`${this.pokeApiBase}/pokemon/${encodeURIComponent(slug)}`);
       if (!res.ok) return { url: null, warning: `Sprite not found for "${slug}" (${res.status}).` };
@@ -1751,48 +2320,31 @@ const COLOR_KEYS = [
   'accent', 'patternColor', 'bannerFill', 'bannerBorder', 'signatureBorder',
 ];
 
-const portland = (id, name, bg, colors) => ({
-  id, name, pattern: 'pokeball',
-  images: { header: 'Portland VGC Header.jpg', vgcIcon: 'Pokemon VGC Icon.png', localIcon: 'Portland VGC Icon.png', background: bg },
-  colors,
-});
-
-const procedural = (id, name, pattern, colors) => ({
-  id, name, pattern,
-  images: { header: null, vgcIcon: null, localIcon: null, background: null },
-  colors,
-});
-
 const base = { text: '#FFFFFF', muted: '#C3D0E5', signatureBorder: '#D8B45A' };
 const BUILTIN_THEMES = Object.freeze([
-  portland('portland-dark', 'Portland Dark', 'Background DB.png', {
-    ...base, headerStart: '#101A2E', headerEnd: '#24365A', bgStart: '#0B1220', bgEnd: '#16233D',
-    card: '#202B40', accent: '#D8B45A', patternColor: '#FFFFFF', bannerFill: '#101A2E', bannerBorder: '#D8B45A',
-  }),
-  portland('portland-light', 'Portland Light', 'Background B.png', {
-    ...base, headerStart: '#2B4A7A', headerEnd: '#4D74B0', bgStart: '#8FB2E6', bgEnd: '#C9DBF5',
-    card: '#202B40', accent: '#D8B45A', patternColor: '#FFFFFF', bannerFill: '#1B2F54', bannerBorder: '#D8B45A',
-  }),
-  portland('portland-bw', 'Portland B&W', 'Background BW.png', {
-    ...base, headerStart: '#1A1A1A', headerEnd: '#3A3A3A', bgStart: '#111111', bgEnd: '#2A2A2A',
-    card: '#242424', accent: '#E0E0E0', patternColor: '#FFFFFF', bannerFill: '#141414', bannerBorder: '#E0E0E0',
-  }),
-  procedural('midnight-pokeball', 'Midnight Pokéball', 'pokeball', {
-    ...base, headerStart: '#0B1020', headerEnd: '#1E2A55', bgStart: '#0A0F1E', bgEnd: '#16204A',
-    card: '#1B2442', accent: '#E3463C', patternColor: '#FFFFFF', bannerFill: '#0B1020', bannerBorder: '#E3463C',
-  }),
-  procedural('crimson-arena', 'Crimson Arena', 'diagonal', {
-    ...base, headerStart: '#3A0A12', headerEnd: '#7A1626', bgStart: '#220509', bgEnd: '#4A0F1B',
-    card: '#2E1219', accent: '#FFB347', patternColor: '#FF6B6B', bannerFill: '#2A070D', bannerBorder: '#FFB347',
-  }),
-  procedural('emerald-circuit', 'Emerald Circuit', 'grid', {
-    ...base, headerStart: '#062B22', headerEnd: '#0E5A45', bgStart: '#04201A', bgEnd: '#0A3F32',
-    card: '#0F2F27', accent: '#4DF0B0', patternColor: '#4DF0B0', bannerFill: '#052219', bannerBorder: '#4DF0B0',
-  }),
-  procedural('minimal-slate', 'Minimal Slate', 'none', {
-    ...base, headerStart: '#2A3140', headerEnd: '#3C4558', bgStart: '#1E2430', bgEnd: '#2A3140',
-    card: '#202B40', accent: '#8FA3C7', patternColor: '#FFFFFF', bannerFill: '#222938', bannerBorder: '#8FA3C7',
-  }),
+  {
+    id: 'portland-dark',
+    name: 'Portland Dark',
+    pattern: 'pokeball',
+    images: {
+      header: 'Portland VGC Header.jpg',
+      vgcIcon: 'Pokemon VGC Icon.png',
+      localIcon: 'Portland VGC Icon.png',
+      background: null,
+    },
+    colors: {
+      ...base,
+      headerStart: '#101A2E',
+      headerEnd: '#24365A',
+      bgStart: '#000000',
+      bgEnd: '#3533CC',
+      card: '#202B40',
+      accent: '#D8B45A',
+      patternColor: '#FFFFFF',
+      bannerFill: '#101A2E',
+      bannerBorder: '#D8B45A',
+    },
+  },
 ]);
 
 function joinUrl(baseUrl, file) {
@@ -1808,21 +2360,266 @@ function resolveTheme(themeId, overrides = {}, assetBaseUrl = getDefaultAssetBas
   const colors = {};
   for (const key of COLOR_KEYS) {
     const fallback = theme.colors[key];
-    colors[key] = normalizeHexColor(Object.hasOwn(ov, key) ? ov[key] : fallback, fallback);
+    colors[key] = normalizeHexColor(Object.prototype.hasOwnProperty.call(ov, key) ? ov[key] : fallback, fallback);
   }
   let baseUrl = typeof assetBaseUrl === 'string' && assetBaseUrl ? assetBaseUrl : getDefaultAssetBaseUrl();
   if (!baseUrl.endsWith('/')) baseUrl += '/';
   const images = {};
   for (const [k, file] of Object.entries(theme.images)) {
-    const override = Object.hasOwn(ov, `${k}Url`) && typeof ov[`${k}Url`] === 'string' ? ov[`${k}Url`] : file;
+    const override = Object.prototype.hasOwnProperty.call(ov, `${k}Url`) && typeof ov[`${k}Url`] === 'string' ? ov[`${k}Url`] : file;
     images[k] = joinUrl(baseUrl, override) || null;
   }
   const pattern = ['pokeball', 'grid', 'diagonal', 'none'].includes(ov.pattern) ? ov.pattern : theme.pattern;
   return { id: theme.id, name: theme.name, pattern, colors, images };
 }
 
+// --- src/adapters/presets.js ---
+// Built-in event presets sourced from pokedata.ovh recent major VGC events.
+const DEFAULT_PRESET_ID = "louisville-2027";
+const EVENT_PRESETS = Object.freeze([
+  {
+    "id": "louisville-2027",
+    "label": "2027 Louisville Regional (Top 8)",
+    "event": {
+      "eventType": "other",
+      "customEventLabel": "Regional Championships",
+      "location": "Louisville",
+      "date": "2026-10-11",
+      "regulation": "M-C",
+      "playerCount": 1013
+    },
+    "standings": [
+      {
+        "placing": "1",
+        "name": "Joseph Ugarte",
+        "handle": "",
+        "teamSource": "Farigiraf @ Sitrus Berry\nAbility: Armor Tail\nQuiet Nature\n- Psychic\n- Thunderbolt\n- Helping Hand\n- Trick Room\n\nIncineroar @ Chople Berry\nAbility: Intimidate\nAdamant Nature\n- Flare Blitz\n- Darkest Lariat\n- Parting Shot\n- Fake Out\n\nCharizard @ Charizardite Y\nAbility: Blaze\nModest Nature\n- Heat Wave\n- Weather Ball\n- Ancient Power\n- Protect\n\nSylveon @ Fairy Feather\nAbility: Pixilate\nModest Nature\n- Hyper Voice\n- Moonblast\n- Yawn\n- Protect\n\nVenusaur @ Focus Sash\nAbility: Chlorophyll\nModest Nature\n- Leaf Storm\n- Sludge Bomb\n- Sleep Powder\n- Protect\n\nGarchomp @ Choice Scarf\nAbility: Rough Skin\nAdamant Nature\n- Rock Slide\n- Stomping Tantrum\n- Dragon Claw\n- Earthquake"
+      },
+      {
+        "placing": "2",
+        "name": "Andrew Figueras",
+        "handle": "",
+        "teamSource": "Archaludon @ Leftovers\nAbility: Stamina\nModest Nature\n- Electro Shot\n- Snarl\n- Dragon Pulse\n- Protect\n\nCharizard @ Charizardite Y\nAbility: Blaze\nModest Nature\n- Heat Wave\n- Weather Ball\n- Hurricane\n- Protect\n\nPelipper @ Sitrus Berry\nAbility: Drizzle\nCalm Nature\n- Weather Ball\n- Hurricane\n- Tailwind\n- Protect\n\nVenusaur @ Focus Sash\nAbility: Chlorophyll\nModest Nature\n- Sludge Bomb\n- Leaf Storm\n- Sleep Powder\n- Protect\n\nGrimmsnarl @ Light Clay\nAbility: Prankster\nImpish Nature\n- Spirit Break\n- Reflect\n- Light Screen\n- Parting Shot\n\nGarchomp @ Choice Scarf\nAbility: Rough Skin\nAdamant Nature\n- Bulldoze\n- Earthquake\n- Rock Slide\n- Dragon Claw"
+      },
+      {
+        "placing": "3",
+        "name": "Dorian Kang",
+        "handle": "",
+        "teamSource": "Venusaur @ Focus Sash\nAbility: Chlorophyll\nModest Nature\n- Sleep Powder\n- Protect\n- Earth Power\n- Sludge Bomb\n\nPolitoed @ Mystic Water\nAbility: Drizzle\nModest Nature\n- Weather Ball\n- Protect\n- Ice Beam\n- Muddy Water\n\nGrimmsnarl @ Light Clay\nAbility: Prankster\nSassy Nature\n- Spirit Break\n- Reflect\n- Light Screen\n- Parting Shot\n\nRaichu @ Raichunite X\nAbility: Lightning Rod\nJolly Nature\n- Fake Out\n- Volt Switch\n- Feint\n- Volt Tackle\n\nArchaludon @ Leftovers\nAbility: Stamina\nBold Nature\n- Dragon Pulse\n- Electro Shot\n- Protect\n- Snarl\n\nCharizard @ Charizardite Y\nAbility: Blaze\nModest Nature\n- Heat Wave\n- Weather Ball\n- Protect\n- Hurricane"
+      },
+      {
+        "placing": "4",
+        "name": "JJ Miller",
+        "handle": "",
+        "teamSource": "Gholdengo @ Life Orb\nAbility: Good as Gold\nTimid Nature\n- Make It Rain\n- Shadow Ball\n- Power Gem\n- Protect\n\nArchaludon @ Leftovers\nAbility: Stamina\nCalm Nature\n- Dragon Pulse\n- Electro Shot\n- Flash Cannon\n- Protect\n\nPelipper @ Sitrus Berry\nAbility: Drizzle\nBold Nature\n- Weather Ball\n- Hurricane\n- Tailwind\n- Wide Guard\n\nSwampert @ Swampertite\nAbility: Torrent\nAdamant Nature\n- Wave Crash\n- Ice Punch\n- Earthquake\n- Protect\n\nStaraptor @ Staraptite\nAbility: Intimidate\nJolly Nature\n- Brave Bird\n- Close Combat\n- Tailwind\n- Protect\n\nSinistcha @ Colbur Berry\nAbility: Hospitality\nRelaxed Nature\n- Matcha Gotcha\n- Rage Powder\n- Trick Room\n- Protect"
+      },
+      {
+        "placing": "5",
+        "name": "Ryan Loseto",
+        "handle": "",
+        "teamSource": "Rillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Wood Hammer\n- Grassy Glide\n- U-turn\n- Fake Out\n\nKingambit @ Chople Berry\nAbility: Defiant\nAdamant Nature\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head\n- Protect\n\nSneasler @ Focus Sash\nAbility: Poison Touch\nJolly Nature\n- Dire Claw\n- Close Combat\n- Fake Out\n- Protect\n\nFloette-Eternal @ Floettite\nAbility: Flower Veil\nBold Nature\n- Moonblast\n- Dazzling Gleam\n- Calm Mind\n- Protect\n\nSalamence @ Salamencite\nAbility: Intimidate\nModest Nature\n- Hyper Voice\n- Flamethrower\n- Tailwind\n- Protect\n\nBasculegion @ Life Orb\nAbility: Adaptability\nJolly Nature\n- Wave Crash\n- Last Respects\n- Aqua Jet\n- Protect"
+      },
+      {
+        "placing": "6",
+        "name": "Toler Webb",
+        "handle": "",
+        "teamSource": "Golisopod @ Golisopite\nAbility: Emergency Exit\nAdamant Nature\n- Leech Life\n- Iron Head\n- Drill Run\n- Protect\n\nGarchomp @ Garchompite Z\nAbility: Rough Skin\nModest Nature\n- Earth Power\n- Draco Meteor\n- Power Gem\n- Protect\n\nPelipper @ Life Orb\nAbility: Drizzle\nModest Nature\n- Weather Ball\n- Muddy Water\n- Hurricane\n- Protect\n\nArchaludon @ Leftovers\nAbility: Stamina\nBold Nature\n- Electro Shot\n- Dragon Pulse\n- Snarl\n- Protect\n\nFarigiraf @ Sitrus Berry\nAbility: Armor Tail\nBold Nature\n- Psychic\n- Helping Hand\n- Trick Room\n- Protect\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Close Combat\n- Gunk Shot\n- U-turn\n- Protect"
+      },
+      {
+        "placing": "7",
+        "name": "Keanu Inosanto",
+        "handle": "",
+        "teamSource": "Basculegion @ Colbur Berry\nAbility: Adaptability\nAdamant Nature\n- Protect\n- Wave Crash\n- Last Respects\n- Aqua Jet\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Wood Hammer\n- High Horsepower\n- Grassy Glide\n- Fake Out\n\nFloette-Eternal @ Floettite\nAbility: Flower Veil\nModest Nature\n- Protect\n- Moonblast\n- Dazzling Gleam\n- Calm Mind\n\nSneasler @ Focus Sash\nAbility: Poison Touch\nJolly Nature\n- Protect\n- Close Combat\n- Dire Claw\n- Fake Out\n\nSalamence @ Salamencite\nAbility: Intimidate\nModest Nature\n- Protect\n- Hyper Voice\n- Flamethrower\n- Tailwind\n\nKingambit @ Chople Berry\nAbility: Defiant\nAdamant Nature\n- Protect\n- Kowtow Cleave\n- Iron Head\n- Sucker Punch"
+      },
+      {
+        "placing": "8",
+        "name": "Brian Hough",
+        "handle": "",
+        "teamSource": "Gholdengo @ Life Orb\nAbility: Good as Gold\nModest Nature\n- Make It Rain\n- Shadow Ball\n- Nasty Plot\n- Protect\n\nDragonite @ Dragoninite\nAbility: Multiscale\nTimid Nature\n- Dragon Pulse\n- Heat Wave\n- Tailwind\n- Protect\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nCareful Nature\n- Flare Blitz\n- Darkest Lariat\n- Fake Out\n- Parting Shot\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Close Combat\n- Dire Claw\n- Rock Tomb\n- Protect\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Wood Hammer\n- Grassy Glide\n- High Horsepower\n- Fake Out\n\nGarchomp @ Choice Scarf\nAbility: Rough Skin\nAdamant Nature\n- Dragon Claw\n- Stomping Tantrum\n- Rock Slide\n- Earthquake"
+      }
+    ]
+  },
+  {
+    "id": "frankfurt-2027",
+    "label": "2027 Frankfurt Regional (Top 8)",
+    "event": {
+      "eventType": "other",
+      "customEventLabel": "Regional Championships",
+      "location": "Frankfurt",
+      "date": "2026-09-27",
+      "regulation": "M-C",
+      "playerCount": 1129
+    },
+    "standings": [
+      {
+        "placing": "1",
+        "name": "Eric Rios",
+        "handle": "",
+        "teamSource": "Gholdengo @ Life Orb\nAbility: Good as Gold\nModest Nature\n- Protect\n- Shadow Ball\n- Nasty Plot\n- Make It Rain\n\nVolcarona @ Rocky Helmet\nAbility: Flame Body\nTimid Nature\n- Overheat\n- Struggle Bug\n- Rage Powder\n- Tailwind\n\nGarchomp @ Garchompite Z\nAbility: Rough Skin\nModest Nature\n- Dragon Pulse\n- Earth Power\n- Power Gem\n- Protect\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nImpish Nature\n- Parting Shot\n- Fake Out\n- Flare Blitz\n- Darkest Lariat\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Grassy Glide\n- Wood Hammer\n- Fake Out\n- U-turn\n\nRaichu @ Raichunite Y\nAbility: Lightning Rod\nTimid Nature\n- Zap Cannon\n- Focus Blast\n- Fake Out\n- Protect"
+      },
+      {
+        "placing": "2",
+        "name": "Sebastian Liu Li",
+        "handle": "",
+        "teamSource": "Farigiraf @ Sitrus Berry\nAbility: Armor Tail\nSassy Nature\n- Psychic\n- Trick Room\n- Helping Hand\n- Protect\n\nGarchomp @ Garchompite Z\nAbility: Rough Skin\nModest Nature\n- Draco Meteor\n- Flamethrower\n- Power Gem\n- Protect\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Close Combat\n- Gunk Shot\n- Fake Out\n- Protect\n\nTorkoal @ Charcoal\nAbility: Drought\nQuiet Nature\n- Eruption\n- Earth Power\n- Weather Ball\n- Protect\n\nSylveon @ Fairy Feather\nAbility: Pixilate\nModest Nature\n- Hyper Voice\n- Hyper Beam\n- Yawn\n- Detect\n\nIncineroar @ Chople Berry\nAbility: Intimidate\nAdamant Nature\n- Flare Blitz\n- Darkest Lariat\n- Parting Shot\n- Fake Out"
+      },
+      {
+        "placing": "3",
+        "name": "Yvar Vlieger",
+        "handle": "",
+        "teamSource": "Charizard @ Charizardite Y\nAbility: Blaze\nModest Nature\n- Heat Wave\n- Weather Ball\n- Ancient Power\n- Protect\n\nKingambit @ Chople Berry\nAbility: Defiant\nAdamant Nature\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head\n- Protect\n\nMeowstic-F @ Meowsticite\nAbility: Competitive\nTimid Nature\n- Expanding Force\n- Thunderbolt\n- Fake Out\n- Protect\n\nSneasler @ Psychic Seed\nAbility: Unburden\nAdamant Nature\n- Close Combat\n- Dire Claw\n- Rock Slide\n- Protect\n\nIndeedee @ Focus Sash\nAbility: Psychic Surge\nTimid Nature\n- Expanding Force\n- Energy Ball\n- Imprison\n- Trick Room\n\nKommo-o @ Leftovers\nAbility: Soundproof\nModest Nature\n- Clanging Scales\n- Aura Sphere\n- Clangorous Soul\n- Protect"
+      },
+      {
+        "placing": "4",
+        "name": "Eden Batchelor",
+        "handle": "",
+        "teamSource": "Gholdengo @ Life Orb\nAbility: Good as Gold\nModest Nature\n- Make It Rain\n- Shadow Ball\n- Nasty Plot\n- Protect\n\nDragonite @ Dragoninite\nAbility: Inner Focus\nModest Nature\n- Dragon Pulse\n- Heat Wave\n- Tailwind\n- Protect\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nImpish Nature\n- Flare Blitz\n- Throat Chop\n- Parting Shot\n- Fake Out\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Grassy Glide\n- Wood Hammer\n- High Horsepower\n- Fake Out\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Close Combat\n- Dire Claw\n- Rock Tomb\n- Protect\n\nFloette-Eternal @ Floettite\nAbility: Flower Veil\nBold Nature\n- Draining Kiss\n- Dazzling Gleam\n- Calm Mind\n- Protect"
+      },
+      {
+        "placing": "5",
+        "name": "Anthony Liuzzo",
+        "handle": "",
+        "teamSource": "Vivillon @ Focus Sash\nAbility: Compound Eyes\nTimid Nature\n- Sleep Powder\n- Rage Powder\n- Hurricane\n- Protect\n\nPolitoed @ Sitrus Berry\nAbility: Drizzle\nCalm Nature\n- Weather Ball\n- Perish Song\n- Encore\n- Protect\n\nGengar @ Gengarite\nAbility: Cursed Body\nModest Nature\n- Shadow Ball\n- Sludge Bomb\n- Perish Song\n- Protect\n\nIncineroar @ Passho Berry\nAbility: Intimidate\nRelaxed Nature\n- Protect\n- Fake Out\n- Flare Blitz\n- Parting Shot\n\nRillaboom @ Occa Berry\nAbility: Grassy Surge\nAdamant Nature\n- Fake Out\n- Grassy Glide\n- U-turn\n- Protect\n\nKommo-o @ Leftovers\nAbility: Soundproof\nModest Nature\n- Clanging Scales\n- Clangorous Soul\n- Aura Sphere\n- Protect"
+      },
+      {
+        "placing": "6",
+        "name": "Juan Manuel Odriozola",
+        "handle": "",
+        "teamSource": "Toxapex @ Leftovers\nAbility: Regenerator\nRelaxed Nature\n- Baneful Bunker\n- Wide Guard\n- Toxic\n- Infestation\n\nSylveon @ Fairy Feather\nAbility: Pixilate\nModest Nature\n- Detect\n- Yawn\n- Hyper Voice\n- Quick Attack\n\nGarchomp @ Choice Scarf\nAbility: Rough Skin\nAdamant Nature\n- Dragon Claw\n- Earthquake\n- Stomping Tantrum\n- Rock Slide\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nImpish Nature\n- Fake Out\n- Parting Shot\n- Flare Blitz\n- Throat Chop\n\nVenusaur @ Life Orb\nAbility: Chlorophyll\nModest Nature\n- Protect\n- Leaf Storm\n- Sludge Bomb\n- Earth Power\n\nCharizard @ Charizardite Y\nAbility: Blaze\nTimid Nature\n- Protect\n- Heat Wave\n- Weather Ball\n- Ancient Power"
+      },
+      {
+        "placing": "7",
+        "name": "Valentijn Visser",
+        "handle": "",
+        "teamSource": "Froslass @ Froslassite\nAbility: Cursed Body\nTimid Nature\n- Protect\n- Blizzard\n- Shadow Ball\n- Aurora Veil\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nImpish Nature\n- Flare Blitz\n- Darkest Lariat\n- Fake Out\n- Parting Shot\n\nBasculegion @ Choice Scarf\nAbility: Adaptability\nJolly Nature\n- Wave Crash\n- Last Respects\n- Flip Turn\n- Aqua Jet\n\nGlimmora @ Glimmoranite\nAbility: Toxic Debris\nTimid Nature\n- Spiky Shield\n- Sludge Bomb\n- Power Gem\n- Earth Power\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Wood Hammer\n- U-turn\n- Grassy Glide\n- Fake Out\n\nVolcarona @ Grassy Seed\nAbility: Flame Body\nModest Nature\n- Protect\n- Heat Wave\n- Giga Drain\n- Quiver Dance"
+      },
+      {
+        "placing": "8",
+        "name": "Giuseppe Musicco",
+        "handle": "",
+        "teamSource": "Floette-Eternal @ Floettite\nAbility: Flower Veil\nModest Nature\n- Dazzling Gleam\n- Draining Kiss\n- Calm Mind\n- Protect\n\nRillaboom @ Miracle Seed\nAbility: Grassy Surge\nAdamant Nature\n- Wood Hammer\n- Grassy Glide\n- High Horsepower\n- Fake Out\n\nIncineroar @ Sitrus Berry\nAbility: Intimidate\nImpish Nature\n- Flare Blitz\n- Taunt\n- Parting Shot\n- Fake Out\n\nDragonite @ Dragoninite\nAbility: Inner Focus\nModest Nature\n- Dragon Pulse\n- Heat Wave\n- Tailwind\n- Protect\n\nGholdengo @ Life Orb\nAbility: Good as Gold\nModest Nature\n- Make It Rain\n- Shadow Ball\n- Nasty Plot\n- Protect\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Dire Claw\n- Close Combat\n- Rock Tomb\n- Protect"
+      }
+    ]
+  },
+  {
+    "id": "baltimore-2027",
+    "label": "2027 Baltimore Regional (Top 4)",
+    "event": {
+      "eventType": "other",
+      "customEventLabel": "Regional Championships",
+      "location": "Baltimore",
+      "date": "2026-09-20",
+      "regulation": "M-C",
+      "playerCount": 1082
+    },
+    "standings": [
+      {
+        "placing": "1",
+        "name": "Joseph Ugarte",
+        "handle": "",
+        "teamSource": "Excadrill @ Focus Sash\nAbility: Sand Rush\nJolly Nature\n- Iron Head\n- High Horsepower\n- Rock Slide\n- Protect\n\nSalamence @ Salamencite\nAbility: Intimidate\nTimid Nature\n- Hyper Voice\n- Draco Meteor\n- Flamethrower\n- Protect\n\nTyranitar @ Tyranitarite\nAbility: Sand Stream\nJolly Nature\n- Rock Slide\n- Knock Off\n- Low Kick\n- Protect\n\nIndeedee @ Choice Scarf\nAbility: Psychic Surge\nModest Nature\n- Expanding Force\n- Mystical Fire\n- Trick\n- Protect\n\nCorviknight @ Psychic Seed\nAbility: Mirror Armor\nCareful Nature\n- Brave Bird\n- Power Trip\n- Bulk Up\n- Roost\n\nSneasler @ White Herb\nAbility: Unburden\nAdamant Nature\n- Dire Claw\n- Close Combat\n- Coaching\n- Protect"
+      },
+      {
+        "placing": "2",
+        "name": "Aditya Subramanian",
+        "handle": "",
+        "teamSource": "Golisopod @ Golisopite\nAbility: Emergency Exit\nAdamant Nature\n- Leech Life\n- Drill Run\n- Iron Head\n- Protect\n\nCharizard @ Charizardite Y\nAbility: Blaze\nTimid Nature\n- Heat Wave\n- Hurricane\n- Weather Ball\n- Protect\n\nPolitoed @ Mystic Water\nAbility: Drizzle\nModest Nature\n- Muddy Water\n- Ice Beam\n- Weather Ball\n- Protect\n\nArchaludon @ Leftovers\nAbility: Stamina\nBold Nature\n- Dragon Pulse\n- Snarl\n- Electro Shot\n- Protect\n\nGrimmsnarl @ Light Clay\nAbility: Prankster\nSassy Nature\n- Light Screen\n- Reflect\n- Parting Shot\n- Spirit Break\n\nFarigiraf @ Sitrus Berry\nAbility: Armor Tail\nBold Nature\n- Psychic\n- Trick Room\n- Protect\n- Grass Knot"
+      },
+      {
+        "placing": "3",
+        "name": "Brady Smith",
+        "handle": "",
+        "teamSource": "Archaludon @ Leftovers\nAbility: Stamina\nBold Nature\n- Dragon Pulse\n- Flash Cannon\n- Electro Shot\n- Protect\n\nIncineroar @ Passho Berry\nAbility: Intimidate\nSassy Nature\n- Fake Out\n- Parting Shot\n- Darkest Lariat\n- Protect\n\nPolitoed @ Sitrus Berry\nAbility: Drizzle\nCalm Nature\n- Perish Song\n- Weather Ball\n- Encore\n- Protect\n\nVivillon @ Focus Sash\nAbility: Compound Eyes\nTimid Nature\n- Sleep Powder\n- Rage Powder\n- Hurricane\n- Protect\n\nRillaboom @ Eject Button\nAbility: Grassy Surge\nCareful Nature\n- Fake Out\n- Grassy Glide\n- U-turn\n- Protect\n\nGengar @ Gengarite\nAbility: Cursed Body\nModest Nature\n- Shadow Ball\n- Sludge Bomb\n- Perish Song\n- Protect"
+      },
+      {
+        "placing": "4",
+        "name": "Blaik Thompson",
+        "handle": "",
+        "teamSource": "Salamence @ Salamencite\nAbility: Intimidate\nTimid Nature\n- Heat Wave\n- Draco Meteor\n- Hyper Voice\n- Protect\n\nArcanine-Hisui @ Focus Sash\nAbility: Rock Head\nJolly Nature\n- Flare Blitz\n- Head Smash\n- Extreme Speed\n- Protect\n\nIndeedee @ Choice Scarf\nAbility: Psychic Surge\nModest Nature\n- Expanding Force\n- Trick\n- Trick Room\n- Imprison\n\nMilotic @ Leftovers\nAbility: Competitive\nCalm Nature\n- Scald\n- Ice Beam\n- Icy Wind\n- Protect\n\nMetagross @ Metagrossite\nAbility: Clear Body\nAdamant Nature\n- Steel Roller\n- Psychic Fangs\n- Body Press\n- Protect\n\nSneasler @ Psychic Seed\nAbility: Unburden\nAdamant Nature\n- Throat Chop\n- Close Combat\n- Rock Slide\n- Protect"
+      }
+    ]
+  },
+  {
+    "id": "worlds-2026",
+    "label": "2026 World Championships (Top 2)",
+    "event": {
+      "eventType": "other",
+      "customEventLabel": "World Championships",
+      "location": "San Francisco",
+      "date": "2026-08-30",
+      "regulation": "M-B",
+      "playerCount": 395
+    },
+    "standings": [
+      {
+        "placing": "1",
+        "name": "Takuma Yamazaki",
+        "handle": "",
+        "teamSource": "Floette-Eternal @ Floettite\nAbility: Flower Veil\nTimid Nature\n- Moonblast\n- Dazzling Gleam\n- Light of Ruin\n- Protect\n\nBasculegion @ Life Orb\nAbility: Adaptability\nAdamant Nature\n- Wave Crash\n- Last Respects\n- Aqua Jet\n- Protect\n\nKingambit @ Chople Berry\nAbility: Defiant\nAdamant Nature\n- Sucker Punch\n- Kowtow Cleave\n- Low Kick\n- Iron Head\n\nDragonite @ Dragoninite\nAbility: Multiscale\nModest Nature\n- Dragon Pulse\n- Heat Wave\n- Extreme Speed\n- Protect\n\nGarchomp @ Choice Scarf\nAbility: Rough Skin\nAdamant Nature\n- Dragon Claw\n- Stomping Tantrum\n- Earthquake\n- Rock Slide\n\nSneasler @ Focus Sash\nAbility: Poison Touch\nJolly Nature\n- Close Combat\n- Dire Claw\n- Fake Out\n- Feint"
+      },
+      {
+        "placing": "2",
+        "name": "Hiroshi Onishi",
+        "handle": "",
+        "teamSource": "Kingambit @ Occa Berry\nAbility: Defiant\nAdamant Nature\n- Kowtow Cleave\n- Sucker Punch\n- Iron Head\n- Low Kick\n\nBasculegion @ Life Orb\nAbility: Adaptability\nAdamant Nature\n- Wave Crash\n- Last Respects\n- Aqua Jet\n- Protect\n\nGarchomp @ Sitrus Berry\nAbility: Rough Skin\nJolly Nature\n- Dragon Claw\n- Earthquake\n- Rock Slide\n- Protect\n\nCharizard @ Charizardite Y\nAbility: Blaze\nTimid Nature\n- Heat Wave\n- Weather Ball\n- Ancient Power\n- Protect\n\nWhimsicott @ Focus Sash\nAbility: Prankster\nTimid Nature\n- Moonblast\n- Tailwind\n- Encore\n- Protect\n\nFloette-Eternal @ Floettite\nAbility: Flower Veil\nModest Nature\n- Moonblast\n- Dazzling Gleam\n- Light of Ruin\n- Protect"
+      }
+    ]
+  },
+  {
+    "id": "masters-eight",
+    "label": "Masters Eight Sample (PokéPaste URLs, Top 4)",
+    "event": {
+      "eventType": "cup",
+      "customEventLabel": "",
+      "location": "Wyndon Stadium",
+      "date": "2022-07-08",
+      "regulation": "Other",
+      "playerCount": 8
+    },
+    "standings": [
+      {
+        "placing": "1",
+        "name": "Ash Ketchum",
+        "handle": "@pikafan25",
+        "teamSource": "https://pokepast.es/33bbc4f4633968dc"
+      },
+      {
+        "placing": "2",
+        "name": "Leon",
+        "handle": "",
+        "teamSource": "https://pokepast.es/380a942db3548064"
+      },
+      {
+        "placing": "3",
+        "name": "Cynthia",
+        "handle": "",
+        "teamSource": "https://pokepast.es/0b04ab36eb7d7b89"
+      },
+      {
+        "placing": "4",
+        "name": "Diantha",
+        "handle": "@mskalos",
+        "teamSource": "https://pokepast.es/77ac36ad28fa6ea6"
+      }
+    ]
+  }
+]);
+function createPresetTournament(presetId = DEFAULT_PRESET_ID) {
+  const preset = EVENT_PRESETS.find((p) => p.id === presetId) ?? EVENT_PRESETS[0];
+  return createEmptyTournament({
+    event: { ...preset.event },
+    standings: preset.standings.map((s) => ({ ...s })),
+    themeConfig: { themeId: DEFAULT_THEME_ID, overrides: {} },
+    signature: "",
+  });
+}
+
 // --- src/renderer/canvas-renderer.js ---
 const FONT = '"Helvetica Neue", Arial, sans-serif';
+const REPO_WATERMARKS = Object.freeze([
+  'github.com/JoshBell302',
+  'github.com/GabMott',
+]);
 
 /** Loads an image; resolves null on error/timeout. Never throws. */
 function loadImage(src, { timeoutMs = 10000 } = {}) {
@@ -1903,7 +2700,7 @@ function safeContext(ctx) {
       if (typeof v === 'function') return v.bind(target);
       if (v === undefined) {
         if (prop === 'measureText') return (t) => ({ width: String(t).length * 8 });
-        if (prop === 'createLinearGradient') return () => ({ addColorStop() {} });
+        if (prop === 'createLinearGradient' || prop === 'createRadialGradient') return () => ({ addColorStop() {} });
         return () => {};
       }
       return v;
@@ -1982,6 +2779,116 @@ function drawPokeball(ctx, cx, cy, r, { top = '#E3463C', bottom = '#F4F4F4', lin
   ctx.stroke();
   ctx.restore();
 }
+function drawPokeballSprite(ctx, cx, cy, r) {
+  if (!(r > 0)) return;
+  ctx.save();
+
+  // Subtle drop shadow
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.08, r * 0.98, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+  ctx.fill();
+
+  // Clip interior hemispheres & equator band to the sphere
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Top red dome with 3D shading
+  const topGrad = ctx.createRadialGradient(cx - r * 0.32, cy - r * 0.38, r * 0.08, cx, cy, r * 1.15);
+  topGrad.addColorStop(0, '#FF6052');
+  topGrad.addColorStop(0.55, '#E33935');
+  topGrad.addColorStop(1, '#9E1B1B');
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(cx - r, cy - r, r * 2, r);
+
+  // Bottom white dome with subtle cool shading
+  const botGrad = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.05, r * 0.1, cx, cy + r * 0.15, r * 1.15);
+  botGrad.addColorStop(0, '#FFFFFF');
+  botGrad.addColorStop(0.65, '#E8EEF5');
+  botGrad.addColorStop(1, '#AEBACC');
+  ctx.fillStyle = botGrad;
+  ctx.fillRect(cx - r, cy, r * 2, r);
+
+  // Soft glossy highlight on upper-left red dome
+  ctx.save();
+  ctx.translate(cx - r * 0.34, cy - r * 0.42);
+  ctx.rotate(-0.55);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.24, r * 0.12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+  ctx.fill();
+  ctx.restore();
+
+  // Equator band
+  const bandH = Math.max(2, r * 0.17);
+  ctx.fillStyle = '#1B202A';
+  ctx.fillRect(cx - r, cy - bandH / 2, r * 2, bandH);
+  ctx.restore();
+
+  // Outer outline
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(1.5, r * 0.09);
+  ctx.strokeStyle = '#1B202A';
+  ctx.stroke();
+
+  // Center button outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2);
+  ctx.fillStyle = '#1B202A';
+  ctx.fill();
+
+  // Center button white face
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.20, 0, Math.PI * 2);
+  ctx.fillStyle = '#F7F9FC';
+  ctx.fill();
+
+  // Inner button accent ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.12, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(1, r * 0.04);
+  ctx.strokeStyle = '#AEBACC';
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBackdropPokeball(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((-35 * Math.PI) / 180);
+  ctx.fillStyle = color;
+
+  // Base translucent disc
+  ctx.globalAlpha = 0.19;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Brighter center button and lower annular crescent (matches Background DB.png)
+  ctx.globalAlpha = 0.1;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.285, 0, Math.PI * 2);
+  ctx.fill();
+
+  const innerR = r * 0.43;
+  const outerR = r * 0.85;
+  const bandHalf = r * 0.07;
+  const startOuter = Math.asin(Math.min(1, bandHalf / outerR));
+  const endOuter = Math.PI - startOuter;
+  const startInner = Math.asin(Math.min(1, bandHalf / innerR));
+  const endInner = Math.PI - startInner;
+  ctx.beginPath();
+  ctx.arc(0, 0, outerR, startOuter, endOuter, false);
+  ctx.arc(0, 0, innerR, endInner, startInner, true);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
 
 function drawPattern(ctx, pattern, color, x, y, w, h) {
   if (pattern === 'none' || !(w > 0) || !(h > 0)) return;
@@ -1990,10 +2897,23 @@ function drawPattern(ctx, pattern, color, x, y, w, h) {
   ctx.rect(x, y, w, h);
   ctx.clip();
   if (pattern === 'pokeball') {
+    // Clean 45° orthogonal diagonal lattice (exact horizontal/vertical symmetry)
     const step = 150;
-    for (let row = 0, py = y + 60; py < y + h + step; row++, py += step) {
-      for (let px = x + (row % 2 ? step / 2 : 0); px < x + w + step; px += step) {
-        drawPokeball(ctx, px, py, 34, { top: color, bottom: color, line: color, alpha: 0.06 });
+    const radius = 60;
+    const angle = Math.PI / 4;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const cx0 = x + w / 2;
+    const cy0 = y + h / 2;
+    const span = Math.ceil((Math.hypot(w, h) / 2 + radius + step) / step);
+    for (let j = -span; j <= span; j++) {
+      for (let i = -span; i <= span; i++) {
+        const px = cx0 + (i * cos - j * sin) * step;
+        const py = cy0 + (i * sin + j * cos) * step;
+        if (px + radius < x || px - radius > x + w || py + radius < y || py - radius > y + h) {
+          continue;
+        }
+        drawBackdropPokeball(ctx, px, py, radius, color);
       }
     }
   } else if (pattern === 'grid') {
@@ -2027,9 +2947,173 @@ function drawHeader(ctx, theme, assets, width, headerH) {
     drawPattern(ctx, theme.pattern, c.patternColor, 0, 0, width, headerH);
   }
   const iconSize = 220;
-  const iy = (headerH - iconSize) / 2 - 20;
-  drawImageContain(ctx, assets.vgcIcon, 40, iy, iconSize, iconSize);
-  drawImageContain(ctx, assets.localIcon, width - 40 - iconSize, iy, iconSize, iconSize);
+  const iconMargin = 40;
+  drawImageContain(ctx, assets.vgcIcon, iconMargin, iconMargin, iconSize, iconSize);
+  drawImageContain(ctx, assets.localIcon, width - iconMargin - iconSize, iconMargin, iconSize, iconSize);
+}
+
+const spriteBoundsCache = new WeakMap();
+let trimCanvas = null;
+
+/**
+ * Computes the tight non-transparent pixel bounding box { sx, sy, sw, sh },
+ * optical core horizontal sidebearings (coreLeft, coreRight), and 24-band
+ * horizontal silhouette profiles (leftProfile, rightProfile) of an image so
+ * asymmetric sprites (e.g. Floette-Eternal, Raichu, Koraidon, Sneasler) get
+ * equal optical spacing without ever touching.
+ */
+function getSpriteTightBounds(img) {
+  const s = imageSize(img);
+  if (!s) return null;
+  if (typeof img === 'object' && spriteBoundsCache.has(img)) {
+    return spriteBoundsCache.get(img);
+  }
+  const full = { sx: 0, sy: 0, sw: s.w, sh: s.h, coreLeft: 0, coreRight: 1, leftProfile: null, rightProfile: null };
+  try {
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+      return full;
+    }
+    if (!trimCanvas) trimCanvas = document.createElement('canvas');
+    const maxDim = 128;
+    const scale = Math.min(1, maxDim / Math.max(s.w, s.h));
+    const tw = Math.max(1, Math.round(s.w * scale));
+    const th = Math.max(1, Math.round(s.h * scale));
+    trimCanvas.width = tw;
+    trimCanvas.height = th;
+    const tctx = trimCanvas.getContext('2d', { willReadFrequently: true });
+    if (!tctx || typeof tctx.getImageData !== 'function') return full;
+    tctx.clearRect(0, 0, tw, th);
+    tctx.drawImage(img, 0, 0, tw, th);
+    const data = tctx.getImageData(0, 0, tw, th).data;
+    let minX = tw;
+    let minY = th;
+    let maxX = -1;
+    let maxY = -1;
+    let totalOpaque = 0;
+    const colCounts = new Int32Array(tw);
+    for (let py = 0; py < th; py++) {
+      const rowOffset = py * tw * 4;
+      for (let px = 0; px < tw; px++) {
+        if (data[rowOffset + px * 4 + 3] > 12) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+          colCounts[px] += 1;
+          totalOpaque += 1;
+        }
+      }
+    }
+    if (maxX < minX || maxY < minY || totalOpaque === 0) {
+      spriteBoundsCache.set(img, full);
+      return full;
+    }
+
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+
+    // 4th–96th percentile horizontal pixel-mass edges (filters out wispy stems/tails/ribbons)
+    const threshold = totalOpaque * 0.04;
+    let acc = 0;
+    let pLeft = minX;
+    for (let px = minX; px <= maxX; px++) {
+      acc += colCounts[px];
+      if (acc >= threshold) {
+        pLeft = px;
+        break;
+      }
+    }
+    acc = 0;
+    let pRight = maxX;
+    for (let px = maxX; px >= minX; px--) {
+      acc += colCounts[px];
+      if (acc >= threshold) {
+        pRight = px;
+        break;
+      }
+    }
+    const coreLeft = Math.max(0, Math.min(0.4, (pLeft - minX) / bw));
+    const coreRight = Math.max(0.6, Math.min(1, (pRight - minX + 1) / bw));
+
+    // 24-band left & right silhouette contours for exact non-overlap kerning
+    const BANDS = 24;
+    const leftProfile = new Array(BANDS).fill(1);
+    const rightProfile = new Array(BANDS).fill(0);
+    for (let py = minY; py <= maxY; py++) {
+      const band = Math.min(BANDS - 1, Math.floor(((py - minY) / bh) * BANDS));
+      const rowOffset = py * tw * 4;
+      for (let px = minX; px <= maxX; px++) {
+        if (data[rowOffset + px * 4 + 3] > 12) {
+          const normL = (px - minX) / bw;
+          const normR = (px - minX + 1) / bw;
+          if (normL < leftProfile[band]) leftProfile[band] = normL;
+          if (normR > rightProfile[band]) rightProfile[band] = normR;
+        }
+      }
+    }
+
+    const padSrc = Math.ceil(1 / scale);
+    const sx = Math.max(0, Math.floor(minX / scale) - padSrc);
+    const sy = Math.max(0, Math.floor(minY / scale) - padSrc);
+    const ex = Math.min(s.w, Math.ceil((maxX + 1) / scale) + padSrc);
+    const ey = Math.min(s.h, Math.ceil((maxY + 1) / scale) + padSrc);
+    const tight = {
+      sx,
+      sy,
+      sw: Math.max(1, ex - sx),
+      sh: Math.max(1, ey - sy),
+      coreLeft,
+      coreRight,
+      leftProfile,
+      rightProfile,
+    };
+    spriteBoundsCache.set(img, tight);
+    return tight;
+  } catch {
+    return full;
+  }
+}
+
+function drawSeparatedBannerLine(ctx, text, cx, y, maxWidth, maxFont, minFont, { color = TEXT_COLOR, weight = 'bold' } = {}) {
+  const str = typeof text === 'string' ? text.trim() : '';
+  if (!str) return;
+  const parts = str.split(/\s*•\s*/).filter(Boolean);
+  if (parts.length <= 1) {
+    drawFitted(ctx, str, cx, y, maxWidth, maxFont, minFont, { color, align: 'center', weight });
+    return;
+  }
+
+  setFont(ctx, maxFont, weight);
+  const partWidths = parts.map((p) => ctx.measureText(p)?.width ?? 0);
+  const bulletW = ctx.measureText('•')?.width ?? maxFont * 0.35;
+  const numSeps = parts.length - 1;
+  const minPad = maxFont * 0.35;
+  const maxPad = maxFont * 0.95;
+  const minTotal = partWidths.reduce((a, b) => a + b, 0) + numSeps * (bulletW + 2 * minPad);
+
+  if (minTotal > maxWidth) {
+    drawFitted(ctx, str, cx, y, maxWidth, maxFont, minFont, { color, align: 'center', weight });
+    return;
+  }
+
+  const rawContent = partWidths.reduce((a, b) => a + b, 0) + numSeps * bulletW;
+  const spare = Math.max(0, maxWidth - rawContent);
+  const padPerSide = Math.max(minPad, Math.min(maxPad, (spare * 0.3) / (2 * numSeps)));
+  const totalWidth = rawContent + numSeps * 2 * padPerSide;
+
+  ctx.fillStyle = color;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  let curX = cx - totalWidth / 2;
+  parts.forEach((part, idx) => {
+    ctx.fillText(part, curX, y);
+    curX += partWidths[idx];
+    if (idx < numSeps) {
+      curX += padPerSide;
+      ctx.fillText('•', curX, y);
+      curX += bulletW + padPerSide;
+    }
+  });
 }
 
 function drawBanner(ctx, theme, tournament, geo) {
@@ -2048,7 +3132,7 @@ function drawBanner(ctx, theme, tournament, geo) {
 
   const cx = (geo.points[0].x + geo.points[1].x) / 2;
   const titleY = geo.topY + (geo.dividerY - geo.topY) / 2;
-  drawFitted(ctx, tournament.titleText, cx, titleY, geo.textMaxWidth, 44, 18, { color: c.text, align: 'center' });
+  drawSeparatedBannerLine(ctx, tournament.titleText, cx, titleY, geo.textMaxWidth, 44, 18, { color: c.text });
   const half = geo.textMaxWidth / 2;
   ctx.strokeStyle = c.accent;
   ctx.lineWidth = 3;
@@ -2056,8 +3140,8 @@ function drawBanner(ctx, theme, tournament, geo) {
   ctx.moveTo(cx - half, geo.dividerY);
   ctx.lineTo(cx + half, geo.dividerY);
   ctx.stroke();
-  drawFitted(ctx, tournament.subtitleText, cx, geo.dividerY + (geo.bottomY - geo.dividerY) / 2, geo.textMaxWidth, 30, 14, {
-    color: c.muted, align: 'center', weight: 'normal',
+  drawSeparatedBannerLine(ctx, tournament.subtitleText, cx, geo.dividerY + (geo.bottomY - geo.dividerY) / 2, geo.textMaxWidth, 30, 14, {
+    color: c.muted, weight: 'normal',
   });
 }
 
@@ -2073,7 +3157,44 @@ function drawSpriteFallback(ctx, slot, name, theme) {
   drawFitted(ctx, name || '?', slot.centerX, py + pillH / 2, pillW - 8, pillH * 0.7, 8, { align: 'center' });
 }
 
-function drawCard(ctx, entry, bounds, theme, assets) {
+function cardDividerOffset(cardHeight) {
+  return Math.max(STANDINGS_PLACING_BADGE_SIZE + 18, Math.round(cardHeight * 0.34));
+}
+
+function resolveCardSprites(entry, assets) {
+  const mons = Array.isArray(entry.pokemon) ? entry.pokemon : [];
+  if (entry.redactTeam === true) {
+    const count = mons.length > 0 ? Math.min(6, mons.length) : 6;
+    return Array.from({ length: count }, () => ({
+      mon: { name: 'Poké Ball', speciesSlug: 'poke-ball' },
+      img: null,
+      tight: null,
+      filler: 'pokeball',
+    }));
+  }
+  return mons.map((mon) => {
+    const m = mon ?? {};
+    const key = m.speciesSlug ? `${m.speciesSlug}${m.shiny ? ':shiny' : ''}` : '';
+    const img = assets.sprites?.[m.spriteUrl] ?? assets.sprites?.[key] ?? null;
+    const tight = getSpriteTightBounds(img);
+    return { mon: m, img, tight, filler: null };
+  });
+}
+
+function spriteMetricsFromResolved(r) {
+  return r.tight
+    ? {
+        sw: r.tight.sw,
+        sh: r.tight.sh,
+        coreLeft: r.tight.coreLeft,
+        coreRight: r.tight.coreRight,
+        leftProfile: r.tight.leftProfile,
+        rightProfile: r.tight.rightProfile,
+      }
+    : { sw: 100, sh: 100 };
+}
+
+function drawCard(ctx, entry, bounds, theme, assets, { resolvedMons, globalSpriteScale = 1 } = {}) {
   const c = theme.colors;
   const { x, y, width, height } = bounds;
   const color = placementColor(entry.placing);
@@ -2084,11 +3205,11 @@ function drawCard(ctx, entry, bounds, theme, assets) {
   ctx.strokeStyle = color;
   ctx.stroke();
 
-  const topH = Math.round(height * 0.38);
   const badge = STANDINGS_PLACING_BADGE_SIZE;
   const badgeW = badge + STANDINGS_PLACING_BADGE_BORDER;
   const bx = x + 14;
-  const by = y + 12;
+  const by = y + 10;
+  const dividerOffset = cardDividerOffset(height);
   drawRoundedRectPath(ctx, bx, by, badgeW, badge, STANDINGS_PLACING_BADGE_RADIUS);
   ctx.fillStyle = color;
   ctx.fill();
@@ -2096,46 +3217,74 @@ function drawCard(ctx, entry, bounds, theme, assets) {
 
   const tx = bx + badgeW + 14;
   const maxW = x + width - 16 - tx;
-  const hasHandle = Boolean(entry.handle);
-  const nameFit = drawFitted(ctx, entry.name || 'Unknown Trainer', tx, by + (hasHandle ? 14 : badge / 2), maxW, 30, 12, { color: c.text });
+  const displayName = entry.redactName === true ? 'Trainer' : (entry.name || 'Unknown Trainer');
+  const displayHandle = entry.redactName === true ? '' : (entry.handle || '');
+  const hasHandle = Boolean(displayHandle);
+  const nameFit = drawFitted(ctx, displayName, tx, by + (hasHandle ? 14 : badge / 2), maxW, 30, 12, { color: c.text });
   if (hasHandle) {
     const room = Math.max(0, maxW - 0);
-    drawFitted(ctx, entry.handle, tx, by + 40, room, 18, 10, { color: c.muted, weight: 'normal' });
+    drawFitted(ctx, displayHandle, tx, by + 38, room, 18, 10, { color: c.muted, weight: 'normal' });
   }
   void nameFit;
 
   ctx.strokeStyle = 'rgba(255,255,255,0.18)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x + 16, y + topH + 6);
-  ctx.lineTo(x + width - 16, y + topH + 6);
+  ctx.moveTo(x + 16, y + dividerOffset);
+  ctx.lineTo(x + width - 16, y + dividerOffset);
   ctx.stroke();
 
-  const mons = Array.isArray(entry.pokemon) ? entry.pokemon : [];
-  const slots = computeSpriteSlots(bounds, topH + 6, mons.length);
+  const items = resolvedMons ?? resolveCardSprites(entry, assets);
+  const slots = computeEqualGapSpriteRow(
+    bounds,
+    dividerOffset,
+    items.map(spriteMetricsFromResolved),
+    { scaleMultiplier: globalSpriteScale },
+  );
   slots.forEach((slot, i) => {
-    const mon = mons[i] ?? {};
-    const key = mon.speciesSlug ? `${mon.speciesSlug}${mon.shiny ? ':shiny' : ''}` : '';
-    const img = assets.sprites?.[mon.spriteUrl] ?? assets.sprites?.[key] ?? null;
-    if (!drawImageContain(ctx, img, slot.centerX - slot.size / 2, slot.y, slot.size, slot.size)) {
+    const { mon, img, tight, filler } = items[i];
+    let drew = false;
+    if (filler === 'pokeball') {
+      const r = Math.min(slot.width, slot.height) * 0.41;
+      drawPokeballSprite(ctx, slot.x + slot.width / 2, slot.y + slot.height / 2, r);
+      drew = true;
+    } else if (img && tight) {
+      try {
+        ctx.drawImage(img, tight.sx, tight.sy, tight.sw, tight.sh, slot.x, slot.y, slot.width, slot.height);
+        drew = true;
+      } catch {
+        drew = false;
+      }
+    }
+    if (!drew) {
       drawSpriteFallback(ctx, slot, mon.name || mon.speciesSlug, theme);
     }
   });
 }
 
-function drawSignature(ctx, theme, text, width, height) {
-  const h = 50;
-  const y = height - SIGNATURE_RESERVED_HEIGHT / 2 - h / 2 - 5;
-  ctx.font = `normal 22px ${FONT}`;
-  const tw = Math.min(width - 100, (ctx.measureText(text)?.width ?? 300) + 60);
-  const x = (width - tw) / 2;
-  drawRoundedRectPath(ctx, x, y, tw, h, 14);
-  ctx.fillStyle = theme.colors.card || CARD_COLOR;
-  ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = theme.colors.signatureBorder || SIGNATURE_BORDER_COLOR;
-  ctx.stroke();
-  drawFitted(ctx, text, width / 2, y + h / 2, tw - 30, 22, 10, { color: theme.colors.muted || MUTED_COLOR, align: 'center', weight: 'normal' });
+function drawWatermarks(ctx, theme, lines, width, height) {
+  const clean = (Array.isArray(lines) ? lines : []).filter((l) => typeof l === 'string' && l.trim());
+  if (clean.length === 0) return;
+  const padX = 24;
+  const padBottom = 14;
+  const lineGap = 19;
+  const maxWidth = Math.max(220, Math.floor(width * 0.38));
+  ctx.save();
+  ctx.globalAlpha = 0.58;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 1;
+  clean.forEach((line, idx) => {
+    const offsetFromBottom = (clean.length - 1 - idx) * lineGap;
+    const y = height - padBottom - 7 - offsetFromBottom;
+    drawFitted(ctx, line, padX, y, maxWidth, 15, 10, {
+      color: theme.colors.text || TEXT_COLOR,
+      align: 'left',
+      weight: 'normal',
+    });
+  });
+  ctx.restore();
 }
 
 /**
@@ -2156,11 +3305,10 @@ function renderStandingsCanvas(canvasOrCtx, tournament, theme, assets = {}, opti
     },
   };
   const standings = Array.isArray(t.standings) ? t.standings.filter((e) => e && typeof e === 'object') : [];
-  const signature = typeof t.signature === 'string' ? t.signature.trim() : '';
   const width = options?.width ?? CANVAS_WIDTH;
   const layout = computeLayout({
     playerCount: standings.length, imageWidth: width, headerHeight: options?.headerHeight ?? HEADER_HEIGHT,
-    hasSignature: Boolean(signature),
+    hasSignature: false,
   });
   const result = { canvasWidth: layout.canvasWidth, canvasHeight: layout.canvasHeight, layout };
 
@@ -2185,18 +3333,19 @@ function renderStandingsCanvas(canvasOrCtx, tournament, theme, assets = {}, opti
   section(() => {
     const bgY = headerH;
     if (!drawImageCover(ctx, a.background, 0, bgY, W, H - bgY)) {
-      drawGradientRect(ctx, 0, bgY, W, H - bgY, colors.bgStart, colors.bgEnd);
+      drawGradientRect(ctx, 0, bgY, W, H - bgY, colors.bgStart, colors.bgEnd, th.pattern === 'pokeball');
       drawPattern(ctx, th.pattern, colors.patternColor, 0, bgY, W, H - bgY);
     }
   });
   section(() => drawHeader(ctx, th, a, W, headerH));
   section(() => {
+    const sepH = SEPARATOR_HEIGHT / 5;
     const g = ctx.createLinearGradient(0, 0, W, 0);
     g.addColorStop(0, colors.headerStart);
     g.addColorStop(0.5, colors.accent);
     g.addColorStop(1, colors.headerStart);
     ctx.fillStyle = g;
-    ctx.fillRect(0, headerH, W, SEPARATOR_HEIGHT / 5);
+    ctx.fillRect(0, headerH - sepH / 2, W, sepH);
   });
   section(() => {
     const geo = computeRhombusGeometry(W, headerH);
@@ -2207,39 +3356,65 @@ function renderStandingsCanvas(canvasOrCtx, tournament, theme, assets = {}, opti
   });
   if (standings.length === 0) {
     section(() => {
-      drawFitted(ctx, 'No standings yet', W / 2, layout.contentTop + 120, W - 200, 48, 20, { color: colors.muted, align: 'center' });
+      drawFitted(ctx, 'No standings yet', W / 2, (layout.contentTop + layout.contentBottom) / 2, W - 200, 48, 20, { color: colors.muted, align: 'center' });
     });
   } else {
+    const resolvedByCard = standings.map((entry) => resolveCardSprites(entry, a));
+    const globalSpriteScale = computeGlobalSpriteScale(
+      standings.map((_, i) => ({
+        cardBounds: layout.cards[i],
+        topSlotHeight: cardDividerOffset(layout.cards[i].height),
+        items: resolvedByCard[i].map(spriteMetricsFromResolved),
+      })),
+    );
     standings.forEach((entry, i) => {
-      section(() => drawCard(ctx, entry, layout.cards[i], th, a));
+      section(() => drawCard(ctx, entry, layout.cards[i], th, a, {
+        resolvedMons: resolvedByCard[i],
+        globalSpriteScale,
+      }));
     });
   }
-  if (signature) section(() => drawSignature(ctx, th, signature, W, H));
+  const watermarks = options?.watermarks !== undefined ? options.watermarks : REPO_WATERMARKS;
+  section(() => drawWatermarks(ctx, th, watermarks, W, H));
   return result;
 }
 
 // --- src/app.js ---
-const SAMPLE_CSV = `location,date,challenge,cup,regulation,player count
-Wyndon Stadium,July 8th,,x,M-8,8
-,,,,,
-placing,name,handle,local,paste,
-1,Ash Ketchum,@pikafan25,Wyndon-Cup-7-8-2022,https://pokepast.es/33bbc4f4633968dc,
-2,Leon,,Wyndon-Cup-7-8-2022,https://pokepast.es/380a942db3548064,
-3,Cynthia,,Wyndon-Cup-7-8-2022,https://pokepast.es/0b04ab36eb7d7b89,
-4,Diantha,@mskalos,Wyndon-Cup-7-8-2022,https://pokepast.es/77ac36ad28fa6ea6,`;
+function toIsoDateInput(value) {
+  const text = sanitizeText(value, { maxLength: 40 });
+  if (!text) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const m = Number.parseInt(slashMatch[1], 10);
+    const day = Number.parseInt(slashMatch[2], 10);
+    const y = Number.parseInt(slashMatch[3], 10);
+    if (m >= 1 && m <= 12 && day >= 1 && day <= 31) {
+      return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+  if (!/\b\d{4}\b/.test(text)) return '';
+  const ts = Date.parse(text);
+  if (!Number.isFinite(ts)) return '';
+  const d = new Date(ts);
+  const y = String(d.getFullYear()).padStart(4, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
-const UPLOAD_SLOTS = [
-  { key: 'header', label: 'Header Image' },
-  { key: 'background', label: 'Background Image' },
-  { key: 'vgcIcon', label: 'Left Icon (VGC)' },
-  { key: 'localIcon', label: 'Right Icon (Local)' },
-];
-
-function createSampleTournament() {
-  const { tournament } = parseStandingsCsv(SAMPLE_CSV);
-  tournament.themeConfig = { themeId: DEFAULT_THEME_ID, overrides: {} };
-  tournament.signature = DEFAULT_SIGNATURE;
-  return tournament;
+function readFileAsText(file) {
+  if (typeof file?.text === 'function') return file.text();
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsText(file);
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 function safeDownloadFilename(tournament, ext) {
@@ -2260,38 +3435,90 @@ function triggerDownload(blob, filename) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Keep blob URL alive long enough for iOS Safari's asynchronous download prompt
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-function decodeUploadedImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Failed to read image file.'));
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
-      const img = new Image();
-      img.onload = () => {
-        const check = validateImageFileMeta({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-        });
-        if (!check.valid) {
-          reject(new Error(check.errors.join(' ')));
-          return;
-        }
-        resolve({ img, dataUrl });
-      };
-      img.onerror = () => reject(new Error('File could not be decoded as a valid image.'));
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
+function getTodayIsoDate() {
+  const d = new Date();
+  const y = String(d.getFullYear()).padStart(4, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function createDefaultTournament() {
+  return createEmptyTournament({
+    event: {
+      eventType: 'challenge',
+      customEventLabel: '',
+      location: '',
+      date: getTodayIsoDate(),
+      regulation: 'M-C',
+      playerCount: 0,
+    },
+    standings: [
+      createStandingEntry({ placing: '1' }),
+      createStandingEntry({ placing: '2' }),
+    ],
+    signature: '',
   });
+}
+
+function generateDefaultDraftName(t) {
+  const ev = t?.event || {};
+  let typeLabel = 'Event';
+  if (ev.eventType === 'challenge') typeLabel = 'League Challenge';
+  else if (ev.eventType === 'cup') typeLabel = 'League Cup';
+  else if (ev.customEventLabel) typeLabel = sanitizeText(ev.customEventLabel, { maxLength: 40 });
+  const loc = sanitizeText(ev.location, { maxLength: 40 });
+  const base = loc ? `${loc} ${typeLabel}` : typeLabel;
+  const formattedDate = formatEventDate(ev.date);
+  return formattedDate ? `${base} (${formattedDate})` : base;
+}
+
+function collectMissingDownloadFields(t) {
+  const missing = [];
+  const ev = t?.event || {};
+  if (ev.eventType === 'other' && !sanitizeText(ev.customEventLabel, { maxLength: 60 })) {
+    missing.push('Event label is missing');
+  }
+  if (!sanitizeText(ev.location, { maxLength: 80 })) {
+    missing.push('Location is missing');
+  }
+  if (!sanitizeText(ev.date, { maxLength: 40 })) {
+    missing.push('Date is missing');
+  }
+  if (!sanitizeText(ev.regulation, { maxLength: 20 })) {
+    missing.push('Regulation is not selected');
+  }
+  if (sanitizePlayerCount(ev.playerCount) <= 0) {
+    missing.push('Player count is 0');
+  }
+  const standings = Array.isArray(t?.standings) ? t.standings : [];
+  if (standings.length === 0) {
+    missing.push('No players entered');
+  } else {
+    standings.forEach((entry, idx) => {
+      const label = `Player #${idx + 1}`;
+      if (entry?.redactName !== true && !sanitizeText(entry?.name, { maxLength: 60 })) {
+        missing.push(`${label}: player name is missing`);
+      }
+      if (entry?.redactTeam !== true) {
+        const count = Array.isArray(entry?.pokemon) ? entry.pokemon.length : 0;
+        if (count === 0) {
+          missing.push(`${label}: team is missing`);
+        } else if (count < MAX_POKEMON_PER_TEAM) {
+          missing.push(`${label}: only ${count} of ${MAX_POKEMON_PER_TEAM} Pokémon entered`);
+        }
+      }
+    });
+  }
+  return missing;
 }
 function initApp(doc = globalThis.document) {
   if (!doc) return null;
@@ -2304,19 +3531,42 @@ function initApp(doc = globalThis.document) {
   const announcer = $('announcer');
   const statusEl = $('status');
   const warningsEl = $('warnings');
-  const analyticsBody = $('analytics-body');
   const playersEl = $('players');
-  const playersEmptyEl = $('players-empty');
+  const topCutSelect = $('f-topCut');
+  const presetsSelect = $('presets-select');
   const draftsSelect = $('drafts-select');
-  const themeSelect = $('f-theme');
-  const uploadListEl = $('upload-list');
+  const saveDraftBtn = $('btn-draft-save');
+  const deleteDraftBtn = $('btn-draft-delete');
 
-  let tournament = createSampleTournament();
-  const customUploads = { header: null, background: null, vgcIcon: null, localIcon: null };
+  let tournament = presetsSelect ? createPresetTournament(DEFAULT_PRESET_ID) : createDefaultTournament();
+  let legacyDateFallback = '';
+  let standingsStash = [];
+  const entryModes = new Map();
+  const manualSlotsByEntry = new Map();
   const imageCache = new Map();
   let renderTimer = null;
   let isRendering = false;
   let pendingRender = false;
+
+  // Seed searchable Pokémon catalog immediately from presets + special table,
+  // then enrich asynchronously with the full PokéAPI species/form list.
+  const presetSeedNames = [];
+  for (const preset of EVENT_PRESETS) {
+    for (const s of preset.standings || []) {
+      if (!isPokepasteUrl(s.teamSource)) {
+        const parsed = parseShowdownTeam(s.teamSource);
+        for (const m of parsed.pokemon) {
+          if (m.name) presetSeedNames.push(m.name);
+        }
+      }
+    }
+  }
+  let pokemonCatalog = buildPokemonCatalog(presetSeedNames);
+  api.fetchPokemonCatalog().then((slugs) => {
+    if (Array.isArray(slugs) && slugs.length > 0) {
+      pokemonCatalog = buildPokemonCatalog([...presetSeedNames, ...slugs]);
+    }
+  });
 
   function announce(msg) {
     if (!announcer) return;
@@ -2327,12 +3577,24 @@ function initApp(doc = globalThis.document) {
   function setStatus(msg, isError = false) {
     if (!statusEl) return;
     statusEl.textContent = msg;
-    statusEl.classList.toggle('is-error', isError);
+    statusEl.classList.toggle('error', isError);
   }
 
   function syncAriaField(el) {
-    if (!el || !el.matches?.('input, select, textarea')) return;
-    const invalid = typeof el.matches === 'function' && el.matches(':user-invalid');
+    if (!el || typeof el.matches !== 'function') return;
+    let isField = false;
+    try {
+      isField = el.matches('input, select, textarea');
+    } catch {
+      return;
+    }
+    if (!isField) return;
+    let invalid = false;
+    try {
+      invalid = el.matches(':user-invalid');
+    } catch {
+      invalid = typeof el.checkValidity === 'function' ? !el.checkValidity() : false;
+    }
     el.setAttribute('aria-invalid', invalid ? 'true' : 'false');
   }
 
@@ -2346,138 +3608,227 @@ function initApp(doc = globalThis.document) {
     return img;
   }
 
-  function populateThemeOptions() {
-    if (!themeSelect) return;
-    themeSelect.innerHTML = '';
-    for (const theme of BUILTIN_THEMES) {
+  function populatePresetOptions(selectedId = DEFAULT_PRESET_ID) {
+    if (!presetsSelect) return;
+    presetsSelect.innerHTML = '';
+    for (const preset of EVENT_PRESETS) {
       const opt = doc.createElement('option');
-      opt.value = theme.id;
-      opt.textContent = theme.name;
-      themeSelect.appendChild(opt);
+      opt.value = preset.id;
+      opt.textContent = preset.label;
+      if (preset.id === selectedId) opt.selected = true;
+      presetsSelect.appendChild(opt);
+    }
+    presetsSelect.value = selectedId;
+  }
+
+  function populateRegulationOptions(extraValue = '') {
+    const regSelect = $('f-regulation');
+    if (!regSelect) return;
+    regSelect.innerHTML = '';
+    const none = doc.createElement('option');
+    none.value = '';
+    none.textContent = '— None —';
+    regSelect.appendChild(none);
+    for (const reg of REGULATION_OPTIONS) {
+      const opt = doc.createElement('option');
+      opt.value = reg;
+      opt.textContent = reg;
+      regSelect.appendChild(opt);
+    }
+    const cleanExtra = sanitizeText(extraValue, { maxLength: 20 });
+    if (cleanExtra && !REGULATION_OPTIONS.includes(cleanExtra)) {
+      const opt = doc.createElement('option');
+      opt.value = cleanExtra;
+      opt.textContent = cleanExtra;
+      regSelect.appendChild(opt);
     }
   }
 
-  function buildUploadControls() {
-    if (!uploadListEl) return;
-    uploadListEl.innerHTML = '';
-    for (const slot of UPLOAD_SLOTS) {
-      const row = doc.createElement('div');
-      row.className = 'upload-row';
-
-      const label = doc.createElement('label');
-      label.setAttribute('for', `upload-${slot.key}`);
-      label.textContent = slot.label;
-
-      const input = doc.createElement('input');
-      input.type = 'file';
-      input.id = `upload-${slot.key}`;
-      input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-
-      const clearBtn = doc.createElement('button');
-      clearBtn.type = 'button';
-      clearBtn.textContent = 'Clear';
-      clearBtn.className = 'small';
-
-      const msg = doc.createElement('span');
-      msg.className = 'upload-status muted';
-
-      input.addEventListener('change', async () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        const metaCheck = validateImageFileMeta({ name: file.name, type: file.type, size: file.size });
-        if (!metaCheck.valid) {
-          msg.textContent = metaCheck.errors.join(' ');
-          msg.className = 'upload-status error-inline';
-          input.value = '';
-          return;
-        }
-        try {
-          const decoded = await decodeUploadedImage(file);
-          customUploads[slot.key] = decoded.img;
-          msg.textContent = `${file.name} (${decoded.img.naturalWidth}×${decoded.img.naturalHeight})`;
-          msg.className = 'upload-status muted';
-          scheduleRender();
-        } catch (err) {
-          msg.textContent = err?.message || 'Invalid image file.';
-          msg.className = 'upload-status error-inline';
-          input.value = '';
-        }
-      });
-
-      clearBtn.addEventListener('click', () => {
-        customUploads[slot.key] = null;
-        input.value = '';
-        msg.textContent = '';
-        scheduleRender();
-      });
-
-      row.append(label, input, clearBtn, msg);
-      uploadListEl.appendChild(row);
+  function populateTopCutOptions(currentCount) {
+    if (!topCutSelect) return;
+    topCutSelect.innerHTML = '';
+    const counts = [...TOP_CUT_OPTIONS];
+    if (currentCount > 0 && !counts.includes(currentCount)) {
+      counts.push(currentCount);
+      counts.sort((a, b) => a - b);
     }
+    for (const n of counts) {
+      const opt = doc.createElement('option');
+      opt.value = String(n);
+      opt.textContent = String(n);
+      topCutSelect.appendChild(opt);
+    }
+    topCutSelect.value = String(counts.includes(currentCount) ? currentCount : 4);
+  }
+
+  function resizeStandings(targetCount) {
+    const n = Math.max(1, Math.floor(Number(targetCount) || 4));
+    // Stash any existing entries beyond the new length so switching 8 -> 4 -> 8 keeps user edits
+    for (let i = 0; i < tournament.standings.length; i++) {
+      standingsStash[i] = tournament.standings[i];
+    }
+    if (tournament.standings.length > n) {
+      tournament.standings = tournament.standings.slice(0, n);
+    } else {
+      while (tournament.standings.length < n) {
+        const idx = tournament.standings.length;
+        tournament.standings.push(
+          standingsStash[idx] || createStandingEntry({ placing: String(idx + 1) }),
+        );
+      }
+    }
+    populateTopCutOptions(tournament.standings.length);
+  }
+
+  function syncPlayerCountButtons(count) {
+    const decBtn = $('btn-playerCount-dec');
+    const incBtn = $('btn-playerCount-inc');
+    if (decBtn) decBtn.disabled = count <= 0;
+    if (incBtn) incBtn.disabled = count >= MAX_PLAYER_COUNT;
   }
 
   function syncFormFromState() {
     const ev = tournament.event;
-    $('f-eventType').value = ev.eventType || 'local';
-    $('f-customLabel').value = ev.customEventLabel || '';
-    $('wrap-customLabel').hidden = ev.eventType !== 'custom';
-    $('f-location').value = ev.location || '';
-    $('f-date').value = ev.date || '';
-    $('f-regulation').value = ev.regulation || '';
-    $('f-playerCount').value = ev.playerCount ? String(ev.playerCount) : '';
-    $('f-signature').value = tournament.signature ?? '';
-
-    const themeId = tournament.themeConfig?.themeId || DEFAULT_THEME_ID;
-    themeSelect.value = BUILTIN_THEMES.some((t) => t.id === themeId) ? themeId : DEFAULT_THEME_ID;
-    const ov = tournament.themeConfig?.overrides || {};
-    const hasCustom = Boolean(ov.headerStart || ov.accent);
-    $('f-customColors').checked = hasCustom;
-    const resolved = resolveTheme(themeSelect.value, ov);
-    $('f-color1').value = resolved.colors.headerStart;
-    $('f-color2').value = resolved.colors.accent;
-    $('f-color1').disabled = !hasCustom;
-    $('f-color2').disabled = !hasCustom;
+    const eventTypeEl = $('f-eventType');
+    const customLabelEl = $('f-customLabel');
+    const wrapCustomEl = $('wrap-customLabel');
+    const locationEl = $('f-location');
+    const dateEl = $('f-date');
+    const regEl = $('f-regulation');
+    const playerCountInput = $('f-playerCount');
+    if (eventTypeEl) eventTypeEl.value = ev.eventType || 'challenge';
+    if (customLabelEl) customLabelEl.value = ev.customEventLabel || '';
+    if (wrapCustomEl) wrapCustomEl.hidden = ev.eventType !== 'other';
+    if (locationEl) locationEl.value = ev.location || '';
+    const isoDate = toIsoDateInput(ev.date);
+    legacyDateFallback = isoDate ? '' : (ev.date || '');
+    if (dateEl) dateEl.value = isoDate;
+    populateRegulationOptions(ev.regulation);
+    if (regEl) regEl.value = sanitizeText(ev.regulation, { maxLength: 20 });
+    const count = sanitizePlayerCount(ev.playerCount);
+    if (playerCountInput) playerCountInput.value = String(count);
+    syncPlayerCountButtons(count);
+    if (tournament.standings.length === 0) {
+      const target = Number.parseInt(topCutSelect?.value, 10) || 2;
+      resizeStandings(TOP_CUT_OPTIONS.includes(target) ? target : 2);
+    } else {
+      populateTopCutOptions(tournament.standings.length);
+    }
 
     renderPlayerList();
-    renderAnalytics();
   }
 
   function readMetadataFromForm() {
-    const eventType = $('f-eventType').value;
-    $('wrap-customLabel').hidden = eventType !== 'custom';
+    const eventType = $('f-eventType')?.value || 'challenge';
+    const wrapCustomEl = $('wrap-customLabel');
+    if (wrapCustomEl) wrapCustomEl.hidden = eventType !== 'other';
+    const dateVal = $('f-date')?.value || '';
+    const count = sanitizePlayerCount($('f-playerCount')?.value);
+    syncPlayerCountButtons(count);
     tournament.event = {
       eventType,
-      customEventLabel: sanitizeText($('f-customLabel').value, { maxLength: 60 }),
-      location: sanitizeText($('f-location').value, { maxLength: 80 }),
-      date: sanitizeText($('f-date').value, { maxLength: 40 }),
-      regulation: sanitizeText($('f-regulation').value, { maxLength: 20 }),
-      playerCount: sanitizePlayerCount($('f-playerCount').value),
+      customEventLabel: sanitizeText($('f-customLabel')?.value, { maxLength: 60 }),
+      location: sanitizeText($('f-location')?.value, { maxLength: 80 }),
+      date: sanitizeText(dateVal || legacyDateFallback, { maxLength: 40 }),
+      regulation: sanitizeText($('f-regulation')?.value, { maxLength: 20 }),
+      playerCount: count,
     };
-    tournament.signature = sanitizeText($('f-signature').value, { maxLength: 80 });
+    tournament.signature = '';
     tournament.updatedAt = new Date().toISOString();
+    tournament.themeConfig = { themeId: DEFAULT_THEME_ID, overrides: {} };
+  }
 
-    const useCustom = $('f-customColors').checked;
-    $('f-color1').disabled = !useCustom;
-    $('f-color2').disabled = !useCustom;
-    const overrides = useCustom
-      ? {
-          headerStart: normalizeHexColor($('f-color1').value, '#101A2E'),
-          accent: normalizeHexColor($('f-color2').value, '#D8B45A'),
-          bannerBorder: normalizeHexColor($('f-color2').value, '#D8B45A'),
-          signatureBorder: normalizeHexColor($('f-color2').value, '#D8B45A'),
-        }
-      : {};
-    tournament.themeConfig = { themeId: themeSelect.value, overrides };
+  function autoSizeTextarea(el) {
+    if (!el || !el.style) return;
+    const minPx = 46;
+    const maxPx = 280;
+    el.style.height = 'auto';
+    const scrollH = Number(el.scrollHeight) || 0;
+    if (scrollH > 0) {
+      el.style.height = `${Math.max(minPx, Math.min(maxPx, scrollH + 2))}px`;
+    } else {
+      const lines = String(el.value || '').split('\n').length;
+      el.style.height = `${Math.max(minPx, Math.min(maxPx, lines * 20 + 18))}px`;
+    }
+  }
+
+  function syncPlacingsFromOrder() {
+    tournament.standings.forEach((entry, i) => {
+      entry.placing = String(i + 1);
+    });
+  }
+
+  function getActivePokemonCatalog() {
+    return filterCatalogByRegulation(pokemonCatalog, tournament.event?.regulation);
+  }
+
+  function getManualSlotsForEntry(entry) {
+    let slots = manualSlotsByEntry.get(entry.id);
+    if (!slots) {
+      slots = Array.from({ length: MAX_POKEMON_PER_TEAM }, (_, idx) => {
+        const mon = entry.pokemon?.[idx];
+        return mon ? { name: mon.name || '', slug: mon.speciesSlug || '' } : { name: '', slug: '' };
+      });
+      manualSlotsByEntry.set(entry.id, slots);
+    }
+    return slots;
+  }
+
+  function syncManualSlotsFromPokemon(entry) {
+    const slots = Array.from({ length: MAX_POKEMON_PER_TEAM }, (_, idx) => {
+      const mon = entry.pokemon?.[idx];
+      return mon ? { name: mon.name || '', slug: mon.speciesSlug || '' } : { name: '', slug: '' };
+    });
+    manualSlotsByEntry.set(entry.id, slots);
+    return slots;
+  }
+
+  async function applyManualSlotsToEntry(entry, slots, warnEl) {
+    const existingBySlug = new Map();
+    for (const mon of entry.pokemon || []) {
+      if (mon.speciesSlug && mon.spriteUrl) existingBySlug.set(mon.speciesSlug, mon.spriteUrl);
+    }
+    const nextPokemon = [];
+    const warnings = [];
+    for (const slot of slots) {
+      const rawName = sanitizeText(slot.name, { maxLength: 60 });
+      if (!rawName) continue;
+      const slug = slot.slug || normalizePokemonSlug(rawName);
+      if (!slug) continue;
+      const mon = createPokemonSet({
+        name: rawName,
+        speciesSlug: slug,
+        spriteUrl: existingBySlug.get(slug) || '',
+      });
+      nextPokemon.push(mon);
+    }
+    entry.pokemon = nextPokemon;
+    entry.teamSource = nextPokemon.map((m) => m.name).join('\n\n');
+    scheduleRender();
+
+    await Promise.all(
+      nextPokemon.map(async (mon) => {
+        if (mon.spriteUrl) return;
+        const { url, warning } = await api.fetchPokemonSprite(mon.speciesSlug);
+        mon.spriteUrl = url ?? '';
+        if (warning) warnings.push(warning);
+      }),
+    );
+    entry.warnings = warnings;
+    if (warnEl) {
+      warnEl.textContent = warnings.join(' • ');
+      warnEl.hidden = warnings.length === 0;
+    }
+    await renderNow();
   }
 
   function renderPlayerList() {
     if (!playersEl) return;
     playersEl.innerHTML = '';
-    if (playersEmptyEl) playersEmptyEl.hidden = tournament.standings.length > 0;
 
     tournament.standings.forEach((entry, index) => {
       const li = doc.createElement('li');
-      li.className = 'player-card';
+      li.className = 'player';
 
       const head = doc.createElement('div');
       head.className = 'player-head';
@@ -2498,6 +3849,7 @@ function initApp(doc = globalThis.document) {
         const tmp = tournament.standings[index - 1];
         tournament.standings[index - 1] = entry;
         tournament.standings[index] = tmp;
+        syncPlacingsFromOrder();
         renderPlayerList();
         scheduleRender();
       });
@@ -2512,33 +3864,12 @@ function initApp(doc = globalThis.document) {
         const tmp = tournament.standings[index + 1];
         tournament.standings[index + 1] = entry;
         tournament.standings[index] = tmp;
+        syncPlacingsFromOrder();
         renderPlayerList();
         scheduleRender();
       });
 
-      const dupBtn = doc.createElement('button');
-      dupBtn.type = 'button';
-      dupBtn.className = 'small';
-      dupBtn.textContent = 'Duplicate';
-      dupBtn.addEventListener('click', () => {
-        const copy = createStandingEntry({ ...entry, id: undefined });
-        tournament.standings.splice(index + 1, 0, copy);
-        renderPlayerList();
-        scheduleRender();
-      });
-
-      const delBtn = doc.createElement('button');
-      delBtn.type = 'button';
-      delBtn.className = 'small danger';
-      delBtn.textContent = 'Remove';
-      delBtn.addEventListener('click', () => {
-        tournament.standings.splice(index, 1);
-        renderPlayerList();
-        renderAnalytics();
-        scheduleRender();
-      });
-
-      actions.append(upBtn, downBtn, dupBtn, delBtn);
+      actions.append(upBtn, downBtn);
       head.append(title, actions);
 
       const grid = doc.createElement('div');
@@ -2564,10 +3895,6 @@ function initApp(doc = globalThis.document) {
         return { wrap, inp };
       };
 
-      const placingField = makeInput('Placing', entry.placing, { placeholder: '1, T4…', maxlength: 12 }, (v) => {
-        entry.placing = sanitizePlacing(v);
-        scheduleRender();
-      });
       const nameField = makeInput('Player Name', entry.name, { placeholder: 'Trainer name', maxlength: 60 }, (v) => {
         entry.name = sanitizeText(v, { maxLength: 60 });
         scheduleRender();
@@ -2576,56 +3903,293 @@ function initApp(doc = globalThis.document) {
         entry.handle = v.trim() ? sanitizeHandle(v) : '';
         scheduleRender();
       });
-      const localField = makeInput('Local / Notes', entry.local, { placeholder: 'Optional tag', maxlength: 80 }, (v) => {
-        entry.local = sanitizeText(v, { maxLength: 80 });
+
+      const warnBox = doc.createElement('div');
+      warnBox.className = 'entry-warnings';
+      warnBox.textContent = (entry.warnings || []).join(' • ');
+      warnBox.hidden = !(entry.warnings && entry.warnings.length);
+
+      // Team entry section with toggle between URL/Paste and 6-slot Manual Entry
+      const mode = entryModes.get(entry.id) === 'manual' ? 'manual' : 'paste';
+      const teamWrap = doc.createElement('div');
+      teamWrap.className = 'mini-field span-2';
+
+      const modeBar = doc.createElement('div');
+      modeBar.className = 'team-mode-bar';
+      const teamHeading = doc.createElement('span');
+      teamHeading.textContent = 'Team';
+
+      const toggleGroup = doc.createElement('div');
+      toggleGroup.className = 'mode-toggle';
+      toggleGroup.setAttribute('role', 'tablist');
+      toggleGroup.setAttribute('aria-label', `Team entry mode for Player #${index + 1}`);
+
+      const pasteBtn = doc.createElement('button');
+      pasteBtn.type = 'button';
+      pasteBtn.textContent = 'URL / Paste';
+      pasteBtn.setAttribute('role', 'tab');
+      pasteBtn.setAttribute('aria-selected', mode === 'paste' ? 'true' : 'false');
+      if (mode === 'paste') pasteBtn.classList.add('active');
+      pasteBtn.addEventListener('click', () => {
+        if (entryModes.get(entry.id) === 'paste') return;
+        entryModes.set(entry.id, 'paste');
+        renderPlayerList();
       });
-      const teamField = makeInput(
-        'Team Source (PokéPaste URL or Showdown Paste)',
-        entry.teamSource,
-        { textarea: true, span2: true, placeholder: 'https://pokepast.es/... or paste Showdown text' },
-        (v) => {
+
+      const manualBtn = doc.createElement('button');
+      manualBtn.type = 'button';
+      manualBtn.textContent = 'Manual';
+      manualBtn.setAttribute('role', 'tab');
+      manualBtn.setAttribute('aria-selected', mode === 'manual' ? 'true' : 'false');
+      if (mode === 'manual') manualBtn.classList.add('active');
+      manualBtn.addEventListener('click', () => {
+        if (entryModes.get(entry.id) === 'manual') return;
+        if ((!entry.pokemon || entry.pokemon.length === 0) && entry.teamSource && !isPokepasteUrl(entry.teamSource)) {
+          const parsed = parseShowdownTeam(entry.teamSource);
+          if (parsed.pokemon.length > 0) entry.pokemon = parsed.pokemon;
+        }
+        syncManualSlotsFromPokemon(entry);
+        entryModes.set(entry.id, 'manual');
+        renderPlayerList();
+      });
+
+      toggleGroup.append(pasteBtn, manualBtn);
+      modeBar.append(teamHeading, toggleGroup);
+      teamWrap.appendChild(modeBar);
+
+      let pasteTextarea = null;
+      if (mode === 'paste') {
+        pasteTextarea = doc.createElement('textarea');
+        pasteTextarea.rows = 1;
+        pasteTextarea.placeholder = 'https://pokepast.es/... or paste Showdown text';
+        pasteTextarea.value = entry.teamSource || '';
+        pasteTextarea.setAttribute('aria-label', 'Team Source (PokéPaste URL or Showdown Paste)');
+        pasteTextarea.addEventListener('input', () => {
+          const v = pasteTextarea.value;
           entry.teamSource = v;
+          autoSizeTextarea(pasteTextarea);
           if (!isPokepasteUrl(v) && v.trim()) {
             const parsed = parseShowdownTeam(v);
             if (parsed.pokemon.length > 0) {
               entry.pokemon = parsed.pokemon;
               entry.warnings = parsed.warnings;
-              renderAnalytics();
+              manualSlotsByEntry.delete(entry.id);
               scheduleRender();
             }
           }
-        },
-      );
-      teamField.inp.addEventListener('blur', async () => {
-        if (entry.teamSource && entry.teamSource.trim()) {
-          await resolveEntryTeam(entry);
-          renderPlayerList();
-          renderAnalytics();
-          await renderNow();
+        });
+        pasteTextarea.addEventListener('blur', async () => {
+          if (entry.teamSource && entry.teamSource.trim()) {
+            await resolveEntryTeam(entry);
+            manualSlotsByEntry.delete(entry.id);
+            renderPlayerList();
+            await renderNow();
+          }
+        });
+        teamWrap.appendChild(pasteTextarea);
+      } else {
+        const slots = getManualSlotsForEntry(entry);
+        const manualGrid = doc.createElement('div');
+        manualGrid.className = 'manual-grid';
+
+        for (let slotIdx = 0; slotIdx < MAX_POKEMON_PER_TEAM; slotIdx++) {
+          const combo = doc.createElement('div');
+          combo.className = 'poke-combo';
+
+          const inp = doc.createElement('input');
+          inp.type = 'text';
+          inp.maxLength = 60;
+          inp.value = slots[slotIdx].name || '';
+          inp.placeholder = `Pokémon ${slotIdx + 1}`;
+          inp.autocomplete = 'off';
+          inp.spellcheck = false;
+          inp.setAttribute('autocomplete', 'off');
+          inp.setAttribute('autocorrect', 'off');
+          inp.setAttribute('autocapitalize', 'off');
+          inp.setAttribute('spellcheck', 'false');
+          inp.setAttribute('data-gramm', 'false');
+          inp.setAttribute('aria-label', `Player #${index + 1} Pokémon ${slotIdx + 1}`);
+          inp.setAttribute('role', 'combobox');
+          inp.setAttribute('aria-autocomplete', 'list');
+          inp.setAttribute('aria-expanded', 'false');
+
+          const dropdown = doc.createElement('ul');
+          dropdown.className = 'poke-suggest';
+          dropdown.setAttribute('role', 'listbox');
+          dropdown.hidden = true;
+
+          let currentMatches = [];
+          let activeIdx = -1;
+          let suppressBlur = false;
+
+          const closeDropdown = () => {
+            dropdown.hidden = true;
+            dropdown.innerHTML = '';
+            currentMatches = [];
+            activeIdx = -1;
+            inp.setAttribute('aria-expanded', 'false');
+          };
+
+          const commitSelection = (match) => {
+            slots[slotIdx] = { name: match.name, slug: match.slug };
+            inp.value = match.name;
+            closeDropdown();
+            applyManualSlotsToEntry(entry, slots, warnBox);
+          };
+
+          const renderDropdown = (query) => {
+            const matches = fuzzySearchPokemon(query, getActivePokemonCatalog(), { limit: 6 });
+            currentMatches = matches;
+            dropdown.innerHTML = '';
+            if (matches.length === 0) {
+              closeDropdown();
+              return;
+            }
+            activeIdx = 0;
+            matches.forEach((m, mi) => {
+              const item = doc.createElement('li');
+              item.setAttribute('role', 'option');
+              item.textContent = m.name;
+              if (mi === activeIdx) item.classList.add('active');
+              let touchStartY = null;
+              item.addEventListener('touchstart', (ev) => {
+                suppressBlur = true;
+                touchStartY = ev.touches?.[0]?.clientY ?? null;
+                setTimeout(() => { suppressBlur = false; }, 350);
+              }, { passive: true });
+              item.addEventListener('touchend', (ev) => {
+                const endY = ev.changedTouches?.[0]?.clientY ?? touchStartY;
+                const moved = touchStartY !== null && endY !== null ? Math.abs(endY - touchStartY) : 0;
+                touchStartY = null;
+                if (moved < 10) {
+                  ev.preventDefault();
+                  commitSelection(m);
+                }
+                suppressBlur = false;
+              });
+              item.addEventListener('mousedown', (ev) => {
+                ev.preventDefault();
+                commitSelection(m);
+              });
+              dropdown.appendChild(item);
+            });
+            dropdown.hidden = false;
+            inp.setAttribute('aria-expanded', 'true');
+          };
+
+          const highlightActive = () => {
+            const opts = dropdown.children || [];
+            for (let i = 0; i < opts.length; i++) {
+              opts[i].classList.toggle('active', i === activeIdx);
+            }
+          };
+
+          inp.addEventListener('input', () => {
+            const val = inp.value;
+            slots[slotIdx] = { name: val, slug: '' };
+            if (val.trim()) {
+              renderDropdown(val);
+            } else {
+              closeDropdown();
+              applyManualSlotsToEntry(entry, slots, warnBox);
+            }
+          });
+
+          inp.addEventListener('focus', () => {
+            if (inp.value.trim()) renderDropdown(inp.value);
+          });
+
+          inp.addEventListener('keydown', (ev) => {
+            if (ev.key === 'ArrowDown' && currentMatches.length > 0) {
+              ev.preventDefault();
+              activeIdx = (activeIdx + 1) % currentMatches.length;
+              highlightActive();
+            } else if (ev.key === 'ArrowUp' && currentMatches.length > 0) {
+              ev.preventDefault();
+              activeIdx = (activeIdx - 1 + currentMatches.length) % currentMatches.length;
+              highlightActive();
+            } else if (ev.key === 'Enter') {
+              if (!dropdown.hidden && currentMatches.length > 0) {
+                ev.preventDefault();
+                commitSelection(currentMatches[Math.max(0, activeIdx)]);
+              }
+            } else if (ev.key === 'Escape') {
+              closeDropdown();
+            }
+          });
+
+          inp.addEventListener('blur', () => {
+            if (suppressBlur) return;
+            const raw = inp.value.trim();
+            if (!raw) {
+              closeDropdown();
+              if (slots[slotIdx].name || slots[slotIdx].slug) {
+                slots[slotIdx] = { name: '', slug: '' };
+                applyManualSlotsToEntry(entry, slots, warnBox);
+              }
+              return;
+            }
+            if (!slots[slotIdx].slug) {
+              const matches = currentMatches.length > 0
+                ? currentMatches
+                : fuzzySearchPokemon(raw, getActivePokemonCatalog(), { limit: 1 });
+              const top = matches[0];
+              if (top) {
+                commitSelection(top);
+                return;
+              }
+              slots[slotIdx] = { name: raw, slug: normalizePokemonSlug(raw) };
+              applyManualSlotsToEntry(entry, slots, warnBox);
+            }
+            closeDropdown();
+          });
+
+          combo.append(inp, dropdown);
+          manualGrid.appendChild(combo);
         }
+
+        teamWrap.appendChild(manualGrid);
+      }
+
+      // Redaction toggles (name -> "Trainer" & disable name/handle fields, team -> Pokéball sprites)
+      const redactBar = doc.createElement('div');
+      redactBar.className = 'redact-toggles';
+
+      const makeToggle = (labelText, checked, onToggle) => {
+        const lbl = doc.createElement('label');
+        lbl.className = 'redact-toggle';
+        const cb = doc.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = Boolean(checked);
+        cb.addEventListener('change', () => onToggle(cb.checked));
+        const txt = doc.createElement('span');
+        txt.textContent = labelText;
+        lbl.append(cb, txt);
+        return lbl;
+      };
+
+      const applyNameRedactionState = () => {
+        const redacted = Boolean(entry.redactName);
+        nameField.inp.disabled = redacted;
+        handleField.inp.disabled = redacted;
+      };
+      applyNameRedactionState();
+
+      const redactNameToggle = makeToggle('Redact name', entry.redactName, (checked) => {
+        entry.redactName = checked;
+        applyNameRedactionState();
+        renderNow();
       });
+      const redactTeamToggle = makeToggle('Redact team', entry.redactTeam, (checked) => {
+        entry.redactTeam = checked;
+        renderNow();
+      });
+      redactBar.append(redactNameToggle, redactTeamToggle);
 
-      grid.append(placingField.wrap, nameField.wrap, handleField.wrap, localField.wrap, teamField.wrap);
-
-      const chips = doc.createElement('div');
-      chips.className = 'pokemon-chips';
-      for (const mon of entry.pokemon || []) {
-        const chip = doc.createElement('span');
-        chip.className = 'chip';
-        chip.textContent = mon.name || mon.speciesSlug || '?';
-        chips.appendChild(chip);
-      }
-
-      li.append(head, grid, chips);
-
-      if (entry.warnings?.length) {
-        const warnBox = doc.createElement('div');
-        warnBox.className = 'entry-warnings';
-        warnBox.textContent = entry.warnings.join(' • ');
-        li.appendChild(warnBox);
-      }
-
+      grid.append(nameField.wrap, handleField.wrap, teamWrap);
+      li.append(head, grid, redactBar, warnBox);
       playersEl.appendChild(li);
+      if (pasteTextarea) autoSizeTextarea(pasteTextarea);
     });
   }
 
@@ -2645,49 +4209,14 @@ function initApp(doc = globalThis.document) {
     setStatus('Fetching teams & Pokémon sprites…');
     await Promise.all(tournament.standings.map((entry) => resolveEntryTeam(entry)));
     renderPlayerList();
-    renderAnalytics();
   }
 
-  function renderAnalytics() {
-    if (!analyticsBody) return;
-    const summary = computeTournamentSummary(tournament);
-    const fmt = (obj) => {
-      const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 12);
-      if (entries.length === 0) return 'None yet';
-      return entries.map(([k, v]) => `${k} (${v})`).join(', ');
-    };
-    analyticsBody.innerHTML = '';
-    const rows = [
-      ['Teams Parsed', `${summary.teams} (${summary.totalPokemon} Pokémon)`],
-      ['Top Pokémon', fmt(summary.pokemon)],
-      ['Top Items', fmt(summary.items)],
-      ['Top Abilities', fmt(summary.abilities)],
-      ['Top Tera Types', fmt(summary.teraTypes)],
-    ];
-    for (const [label, val] of rows) {
-      const p = doc.createElement('p');
-      const b = doc.createElement('strong');
-      b.textContent = `${label}: `;
-      p.append(b, doc.createTextNode(val));
-      analyticsBody.appendChild(p);
-    }
-  }
-
-  function renderWarningsList(extraWarnings = []) {
+  function renderWarningsList() {
+    // Keep persistent warnings hidden under the Download button; incomplete
+    // fields are surfaced in a confirmation dialog when downloading a PNG.
     if (!warningsEl) return;
-    const validation = validateTournament(tournament);
-    const all = [...validation.errors, ...validation.warnings, ...extraWarnings];
-    for (const entry of tournament.standings) {
-      for (const w of entry.warnings || []) {
-        all.push(`${entry.name || `Placing ${entry.placing || '?'}`}: ${w}`);
-      }
-    }
     warningsEl.innerHTML = '';
-    for (const msg of [...new Set(all)].slice(0, 20)) {
-      const li = doc.createElement('li');
-      li.textContent = msg;
-      warningsEl.appendChild(li);
-    }
+    warningsEl.hidden = true;
   }
 
   async function renderNow() {
@@ -2697,16 +4226,17 @@ function initApp(doc = globalThis.document) {
     }
     isRendering = true;
     try {
-      const theme = resolveTheme(tournament.themeConfig?.themeId, tournament.themeConfig?.overrides);
+      const theme = resolveTheme(DEFAULT_THEME_ID);
       const [header, background, vgcIcon, localIcon] = await Promise.all([
-        customUploads.header ? Promise.resolve(customUploads.header) : getCachedImage(theme.images.header),
-        customUploads.background ? Promise.resolve(customUploads.background) : getCachedImage(theme.images.background),
-        customUploads.vgcIcon ? Promise.resolve(customUploads.vgcIcon) : getCachedImage(theme.images.vgcIcon),
-        customUploads.localIcon ? Promise.resolve(customUploads.localIcon) : getCachedImage(theme.images.localIcon),
+        getCachedImage(theme.images.header),
+        getCachedImage(theme.images.background),
+        getCachedImage(theme.images.vgcIcon),
+        getCachedImage(theme.images.localIcon),
       ]);
 
       const spriteUrls = new Set();
       for (const entry of tournament.standings) {
+        if (entry.redactTeam === true) continue;
         for (const mon of entry.pokemon || []) {
           if (mon.spriteUrl) spriteUrls.add(mon.spriteUrl);
         }
@@ -2747,31 +4277,43 @@ function initApp(doc = globalThis.document) {
     }, 150);
   }
 
+  function syncDraftButtons() {
+    if (deleteDraftBtn) {
+      deleteDraftBtn.disabled = !(draftsSelect && draftsSelect.value);
+    }
+  }
+
   async function refreshDraftsDropdown() {
     if (!draftsSelect) return;
     const list = await store.list();
     draftsSelect.innerHTML = '';
     const empty = doc.createElement('option');
     empty.value = '';
-    empty.textContent = list.length ? '— select saved draft —' : '— none —';
+    empty.textContent = list.length ? 'Load draft…' : 'No saved drafts';
     draftsSelect.appendChild(empty);
+    let matchedId = '';
     for (const item of list) {
       const opt = doc.createElement('option');
       opt.value = item.id;
-      const loc = item.event?.location || 'Untitled';
-      const date = item.event?.date ? ` (${item.event.date})` : '';
-      opt.textContent = `${loc}${date}`;
-      if (item.id === tournament.id) opt.selected = true;
+      opt.textContent = item.draftName || generateDefaultDraftName(item);
+      if (item.id === tournament.id) {
+        opt.selected = true;
+        matchedId = item.id;
+      }
       draftsSelect.appendChild(opt);
     }
+    draftsSelect.value = matchedId;
+    draftsSelect.disabled = list.length === 0;
+    syncDraftButtons();
   }
 
-  // Wire metadata & theme form events
-  const metaIds = ['f-eventType', 'f-customLabel', 'f-location', 'f-date', 'f-regulation', 'f-playerCount', 'f-signature', 'f-theme', 'f-customColors', 'f-color1', 'f-color2'];
+  // Wire metadata form events
+  const metaIds = ['f-eventType', 'f-customLabel', 'f-location', 'f-date', 'f-regulation'];
   for (const id of metaIds) {
     const el = $(id);
     if (!el) continue;
     const handler = () => {
+      if (id === 'f-date') legacyDateFallback = '';
       syncAriaField(el);
       readMetadataFromForm();
       scheduleRender();
@@ -2781,21 +4323,80 @@ function initApp(doc = globalThis.document) {
     el.addEventListener('blur', () => syncAriaField(el));
   }
 
-  // Toolbar actions
-  $('btn-sample')?.addEventListener('click', async () => {
-    tournament = createSampleTournament();
-    syncFormFromState();
-    await resolveAllTeams();
-    await renderNow();
-    announce('Loaded Masters Eight sample tournament.');
+  // Player count numeric-only text entry + left/right stepper buttons
+  const playerCountEl = $('f-playerCount');
+  const setPlayerCount = (next) => {
+    const clamped = Math.max(0, Math.min(MAX_PLAYER_COUNT, Math.floor(Number(next) || 0)));
+    if (playerCountEl) playerCountEl.value = String(clamped);
+    syncPlayerCountButtons(clamped);
+    readMetadataFromForm();
+    scheduleRender();
+  };
+  if (playerCountEl) {
+    playerCountEl.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setPlayerCount(sanitizePlayerCount(playerCountEl.value) + 1);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setPlayerCount(sanitizePlayerCount(playerCountEl.value) - 1);
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length === 1 && !/^\d$/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+    playerCountEl.addEventListener('input', () => {
+      const digitsOnly = playerCountEl.value.replace(/\D+/g, '');
+      let nextVal = digitsOnly;
+      if (digitsOnly !== '' && Number(digitsOnly) > MAX_PLAYER_COUNT) {
+        nextVal = String(MAX_PLAYER_COUNT);
+      }
+      if (playerCountEl.value !== nextVal) playerCountEl.value = nextVal;
+      syncAriaField(playerCountEl);
+      readMetadataFromForm();
+      scheduleRender();
+    });
+    playerCountEl.addEventListener('blur', () => {
+      const clamped = sanitizePlayerCount(playerCountEl.value);
+      playerCountEl.value = String(clamped);
+      syncPlayerCountButtons(clamped);
+      syncAriaField(playerCountEl);
+      readMetadataFromForm();
+    });
+  }
+  $('btn-playerCount-dec')?.addEventListener('click', () => {
+    setPlayerCount(sanitizePlayerCount(playerCountEl?.value) - 1);
+  });
+  $('btn-playerCount-inc')?.addEventListener('click', () => {
+    setPlayerCount(sanitizePlayerCount(playerCountEl?.value) + 1);
   });
 
-  $('btn-add-player')?.addEventListener('click', () => {
-    const nextPlacing = String(tournament.standings.length + 1);
-    tournament.standings.push(createStandingEntry({ placing: nextPlacing }));
+  // Toolbar actions
+  presetsSelect?.addEventListener('change', async () => {
+    const presetId = presetsSelect.value;
+    if (!presetId) return;
+    const preset = EVENT_PRESETS.find((p) => p.id === presetId);
+    standingsStash = [];
+    manualSlotsByEntry.clear();
+    tournament = createPresetTournament(presetId);
+    syncFormFromState();
+    renderNow();
+    await resolveAllTeams();
+    await renderNow();
+    announce(`Loaded preset: ${preset?.label || presetId}.`);
+  });
+
+  topCutSelect?.addEventListener('change', () => {
+    const selected = Number.parseInt(topCutSelect.value, 10);
+    if (!Number.isFinite(selected) || selected <= 0) return;
+    resizeStandings(selected);
     renderPlayerList();
-    renderAnalytics();
     scheduleRender();
+    announce(`Top Cut set to ${selected} players.`);
   });
 
   $('btn-render')?.addEventListener('click', async () => {
@@ -2804,107 +4405,226 @@ function initApp(doc = globalThis.document) {
     await renderNow();
   });
 
-  $('btn-download')?.addEventListener('click', () => {
+  const performPngDownload = () => {
+    const filename = safeDownloadFilename(tournament, 'png');
     try {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          setStatus('Could not export PNG (canvas may be tainted by a cross-origin image without CORS).', true);
-          return;
-        }
-        triggerDownload(blob, safeDownloadFilename(tournament, 'png'));
+      if (typeof canvas?.toBlob === 'function') {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            setStatus('Could not export PNG (canvas may be tainted by a cross-origin image without CORS).', true);
+            return;
+          }
+          triggerDownload(blob, filename);
+          setStatus('PNG downloaded.');
+        }, 'image/png');
+      } else if (typeof canvas?.toDataURL === 'function') {
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = doc.createElement('a');
+        a.href = dataUrl;
+        a.download = filename;
+        doc.body.appendChild(a);
+        a.click();
+        a.remove();
         setStatus('PNG downloaded.');
-      }, 'image/png');
+      }
     } catch {
-      setStatus('PNG export blocked by browser CORS policy. Try a procedural theme or upload images locally.', true);
+      setStatus('PNG export blocked by browser CORS policy. Try reloading or using local images.', true);
     }
+  };
+
+  // Consolidated dialogs (Upload, Export, Save Draft, Clear Fields, Incomplete Download Warning)
+  const openDialog = (dlg) => {
+    if (!dlg) return;
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else dlg.open = true;
+  };
+  const closeDialog = (dlg) => {
+    if (!dlg) return;
+    if (typeof dlg.close === 'function') dlg.close();
+    else dlg.open = false;
+  };
+
+  const uploadDialog = $('dialog-upload');
+  const exportDialog = $('dialog-export');
+  const saveDraftDialog = $('dialog-save-draft');
+  const clearDialog = $('dialog-clear');
+  const downloadWarnDialog = $('dialog-download-warn');
+  const downloadWarnList = $('download-warn-list');
+  const draftNameInput = $('f-draftName');
+  for (const dlg of [uploadDialog, exportDialog, saveDraftDialog, clearDialog, downloadWarnDialog]) {
+    dlg?.addEventListener('click', (e) => {
+      if (e.target === dlg) closeDialog(dlg);
+    });
+  }
+
+  $('btn-download')?.addEventListener('click', () => {
+    readMetadataFromForm();
+    const missing = collectMissingDownloadFields(tournament);
+    if (missing.length > 0 && downloadWarnDialog) {
+      if (downloadWarnList) {
+        downloadWarnList.innerHTML = '';
+        for (const msg of missing) {
+          const li = doc.createElement('li');
+          li.textContent = msg;
+          downloadWarnList.appendChild(li);
+        }
+      }
+      openDialog(downloadWarnDialog);
+      return;
+    }
+    performPngDownload();
   });
 
-  // CSV Import / Export
-  $('btn-import-csv')?.addEventListener('click', () => $('file-csv')?.click());
-  $('file-csv')?.addEventListener('change', async (e) => {
+  $('btn-download-warn-cancel')?.addEventListener('click', () => closeDialog(downloadWarnDialog));
+  $('btn-download-warn-confirm')?.addEventListener('click', () => {
+    closeDialog(downloadWarnDialog);
+    performPngDownload();
+  });
+
+  $('btn-upload')?.addEventListener('click', () => openDialog(uploadDialog));
+  $('btn-upload-cancel')?.addEventListener('click', () => closeDialog(uploadDialog));
+  $('file-upload')?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
-      const { tournament: parsed, warnings } = parseStandingsCsv(text);
-      tournament = parsed;
-      syncFormFromState();
-      await resolveAllTeams();
-      await renderNow();
-      if (warnings.length) renderWarningsList(warnings);
-      announce(`Imported CSV with ${tournament.standings.length} players.`);
+      const name = String(file.name || '').toLowerCase();
+      const isJsonExt = name.endsWith('.json') || file.type === 'application/json';
+      const isCsvExt = name.endsWith('.csv') || file.type === 'text/csv';
+      if (!isJsonExt && !isCsvExt) {
+        setStatus('Please select a .csv or .json file.', true);
+        return;
+      }
+      const text = await readFileAsText(file);
+      standingsStash = [];
+      manualSlotsByEntry.clear();
+      if (isJsonExt || (!isCsvExt && text.trim().startsWith('{'))) {
+        tournament = deserializeTournament(text);
+        syncFormFromState();
+        closeDialog(uploadDialog);
+        await renderNow();
+        announce('Imported tournament JSON.');
+      } else {
+        const { tournament: parsed, warnings } = parseStandingsCsv(text);
+        tournament = parsed;
+        syncFormFromState();
+        closeDialog(uploadDialog);
+        await resolveAllTeams();
+        await renderNow();
+        if (warnings.length) renderWarningsList(warnings);
+        announce(`Imported CSV with ${tournament.standings.length} players.`);
+      }
     } catch (err) {
-      setStatus(`CSV import failed: ${err?.message || 'invalid file'}`, true);
+      setStatus(`Upload failed: ${err?.message || 'invalid file'}`, true);
     } finally {
       e.target.value = '';
     }
   });
+
+  $('btn-export')?.addEventListener('click', () => openDialog(exportDialog));
+  $('btn-export-cancel')?.addEventListener('click', () => closeDialog(exportDialog));
 
   $('btn-export-csv')?.addEventListener('click', () => {
     readMetadataFromForm();
     const csv = exportStandingsCsv(tournament);
     triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8' }), safeDownloadFilename(tournament, 'csv'));
+    closeDialog(exportDialog);
     setStatus('CSV exported.');
-  });
-
-  // JSON Import / Export (analytics-ready schema)
-  $('btn-import-json')?.addEventListener('click', () => $('file-json')?.click());
-  $('file-json')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      tournament = deserializeTournament(text);
-      syncFormFromState();
-      await renderNow();
-      announce('Imported tournament JSON.');
-    } catch (err) {
-      setStatus(`JSON import failed: ${err?.message || 'invalid JSON'}`, true);
-    } finally {
-      e.target.value = '';
-    }
   });
 
   $('btn-export-json')?.addEventListener('click', () => {
     readMetadataFromForm();
     const json = JSON.stringify(JSON.parse(serializeTournament(tournament)), null, 2);
     triggerDownload(new Blob([json], { type: 'application/json;charset=utf-8' }), safeDownloadFilename(tournament, 'json'));
-    setStatus('Analytics-ready JSON exported.');
+    closeDialog(exportDialog);
+    setStatus('JSON exported.');
   });
 
   // Drafts (LocalStorageTournamentStore)
-  $('btn-draft-save')?.addEventListener('click', async () => {
+  let saveFlashTimer = null;
+  const commitSaveDraft = async () => {
     readMetadataFromForm();
+    const enteredName = sanitizeText(draftNameInput?.value, { maxLength: 80 });
+    tournament.draftName = enteredName || generateDefaultDraftName(tournament);
     const saved = await store.save(tournament);
+    closeDialog(saveDraftDialog);
     if (!saved) {
-      setStatus('Could not save draft (localStorage unavailable or full).', true);
+      setStatus('Could not save draft (browser storage unavailable or full).', true);
       return;
     }
     tournament = saved;
     await refreshDraftsDropdown();
-    setStatus('Draft saved locally.');
+    setStatus(`Saved draft "${tournament.draftName}".`);
+    if (saveDraftBtn) {
+      clearTimeout(saveFlashTimer);
+      saveDraftBtn.textContent = 'Saved ✓';
+      saveFlashTimer = setTimeout(() => { saveDraftBtn.textContent = 'Save Draft'; }, 1500);
+    }
+  };
+
+  saveDraftBtn?.addEventListener('click', () => {
+    readMetadataFromForm();
+    const suggested = tournament.draftName || generateDefaultDraftName(tournament);
+    if (draftNameInput) {
+      draftNameInput.value = suggested;
+    }
+    openDialog(saveDraftDialog);
+    const selectDraftName = () => {
+      if (!draftNameInput) return;
+      try {
+        draftNameInput.focus?.();
+        draftNameInput.select?.();
+        if (typeof draftNameInput.setSelectionRange === 'function') {
+          draftNameInput.setSelectionRange(0, draftNameInput.value.length);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    selectDraftName();
+    setTimeout(selectDraftName, 0);
   });
 
-  $('btn-draft-new')?.addEventListener('click', async () => {
-    tournament = createEmptyTournament();
+  $('btn-save-draft-cancel')?.addEventListener('click', () => closeDialog(saveDraftDialog));
+  $('btn-save-draft-confirm')?.addEventListener('click', () => commitSaveDraft());
+  draftNameInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitSaveDraft();
+    }
+  });
+
+  $('btn-draft-new')?.addEventListener('click', () => openDialog(clearDialog));
+  $('btn-clear-cancel')?.addEventListener('click', () => closeDialog(clearDialog));
+  $('btn-clear-confirm')?.addEventListener('click', async () => {
+    standingsStash = [];
+    manualSlotsByEntry.clear();
+    entryModes.clear();
+    tournament = createDefaultTournament();
     syncFormFromState();
+    await refreshDraftsDropdown();
+    closeDialog(clearDialog);
     await renderNow();
-    setStatus('Started a new blank tournament.');
+    setStatus('Fields cleared.');
+    announce('All fields reset to defaults.');
   });
 
-  $('btn-draft-delete')?.addEventListener('click', async () => {
+  deleteDraftBtn?.addEventListener('click', async () => {
     const id = draftsSelect?.value;
     if (!id) return;
     await store.delete(id);
     await refreshDraftsDropdown();
-    setStatus('Draft deleted.');
+    setStatus('Saved draft deleted.');
   });
 
   draftsSelect?.addEventListener('change', async () => {
     const id = draftsSelect.value;
+    syncDraftButtons();
     if (!id) return;
     const loaded = await store.get(id);
     if (loaded) {
+      standingsStash = [];
+      manualSlotsByEntry.clear();
+      entryModes.clear();
       tournament = loaded;
       syncFormFromState();
       await renderNow();
@@ -2913,21 +4633,51 @@ function initApp(doc = globalThis.document) {
   });
 
   // Initial boot
-  populateThemeOptions();
-  buildUploadControls();
+  populatePresetOptions(DEFAULT_PRESET_ID);
+  populateRegulationOptions();
   syncFormFromState();
   refreshDraftsDropdown();
+  renderNow();
   resolveAllTeams().then(() => renderNow());
 
   return { renderNow, resolveAllTeams, getTournament: () => tournament };
 }
 
 if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initApp(document));
-  } else {
-    initApp(document);
+  let booted = false;
+  const boot = () => {
+    if (booted) return;
+    if (!document.getElementById('standings-canvas') || !document.getElementById('players')) return;
+    booted = true;
+    try {
+      initApp(document);
+    } catch (err) {
+      const st = document.getElementById('status');
+      if (st) st.textContent = `Startup error: ${err?.message || 'unexpected error'}`;
+    }
+  };
+  // gistpreview.github.io uses document.write() without document.close(),
+  // leaving readyState === 'loading' forever even though the script sits at
+  // the end of <body> and the DOM is already parsed.
+  boot();
+  if (!booted) {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('load', boot, { once: true });
+    }
+    setTimeout(boot, 50);
   }
+  // Close gistpreview's open document.write() stream on next tick so Safari
+  // stops spinning and completes document lifecycle cleanly.
+  setTimeout(() => {
+    try {
+      if (typeof location !== 'undefined' && location.hostname === 'gistpreview.github.io' && document.readyState === 'loading') {
+        document.close();
+      }
+    } catch {
+      /* ignore */
+    }
+  }, 0);
 }
 
 })();

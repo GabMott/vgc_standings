@@ -72,6 +72,7 @@ for (const color of ['Blue', 'Orange', 'White', 'Yellow', 'Red']) {
   entries[`Floette-${color}`] = 'floette';
   entries[`Florges-${color}`] = 'florges';
 }
+entries['Floette-Eternal'] = 'floette-eternal';
 for (const trim of ['Heart', 'Star', 'Diamond', 'Debutante', 'Matron', 'Dandy', 'La Reine', 'Kabuki', 'Pharaoh']) {
   entries[`Furfrou-${trim}`] = 'furfrou';
 }
@@ -83,6 +84,7 @@ entries['Meowstic-F-Mega'] = 'meowstic-female-mega';
 entries['Aegislash'] = 'aegislash-shield';
 entries['Aegislash-Shield'] = 'aegislash-shield';
 entries['Aegislash-Blade'] = 'aegislash-blade';
+entries['Pyroar'] = 'pyroar-male';
 for (const size of ['Small', 'Large', 'Super']) {
   entries[`Pumpkaboo-${size}`] = `pumpkaboo-${size.toLowerCase()}`;
   entries[`Gourgeist-${size}`] = `gourgeist-${size.toLowerCase()}`;
@@ -143,8 +145,8 @@ entries["Farfetch'd-Galar"] = 'farfetchd-galar';
 entries['Urshifu'] = 'urshifu-single-strike';
 entries['Urshifu-Single-Strike'] = 'urshifu-single-strike';
 entries['Urshifu-Rapid-Strike'] = 'urshifu-rapid-strike';
-entries['Calyrex-Ice'] = 'calyrex-ice-rider';
-entries['Calyrex-Shadow'] = 'calyrex-shadow-rider';
+entries['Calyrex-Ice'] = 'calyrex-ice';
+entries['Calyrex-Shadow'] = 'calyrex-shadow';
 entries['Zacian'] = 'zacian';
 entries['Zacian-Crowned'] = 'zacian-crowned';
 entries['Zamazenta'] = 'zamazenta';
@@ -175,6 +177,7 @@ for (const name of ['Great Tusk', 'Scream Tail', 'Brute Bonnet', 'Flutter Mane',
 }
 entries['Silther Wing'] = 'slither-wing'; // legacy typo kept as an alias
 entries['Poltchageist-Artisan'] = 'poltchageist';
+entries['Sinistcha-Unremarkable'] = 'sinistcha';
 entries['Sinistcha-Masterpiece'] = 'sinistcha';
 entries['Ogerpon'] = 'ogerpon';
 for (const mask of ['Wellspring', 'Hearthflame', 'Cornerstone']) {
@@ -259,4 +262,161 @@ export function normalizePokemonSlug(rawName) {
   const species = stripNicknameAndGender(rawName);
   if (!species) return '';
   return lookupSpecialAdjustment(species) ?? defaultSlug(species);
+}
+
+const SLUG_TO_DISPLAY = new Map();
+for (const [displayName, slug] of Object.entries(SPECIAL_POKEMON_URL_ADJUSTMENTS)) {
+  // Prefer clean ASCII/standard names (skip legacy typo/mojibake/NFD aliases)
+  if (displayName === 'Silther Wing' || displayName.includes('\u00e2\u0080') || displayName.includes('\u0301') || displayName.includes('\u2019')) {
+    continue;
+  }
+  if (!SLUG_TO_DISPLAY.has(slug)) SLUG_TO_DISPLAY.set(slug, displayName);
+}
+
+/** Converts a PokeAPI slug like "flutter-mane" or "arcanine-hisui" into a readable display name. */
+export function formatSlugDisplayName(slug) {
+  const clean = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+  if (!clean) return '';
+  if (SLUG_TO_DISPLAY.has(clean)) return SLUG_TO_DISPLAY.get(clean);
+  return clean
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('-');
+}
+
+/** Builds a deduplicated, searchable Pokémon catalog from raw slugs and/or display names. */
+export function buildPokemonCatalog(rawItems = []) {
+  const bySlug = new Map();
+  const addEntry = (name, slug) => {
+    const cleanSlug = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+    if (!cleanSlug || bySlug.has(cleanSlug)) return;
+    const display = name || formatSlugDisplayName(cleanSlug);
+    const norm = lookupKey(display).replace(/[-_.'’:\s]+/g, ' ').trim();
+    const compact = norm.replace(/\s+/g, '');
+    bySlug.set(cleanSlug, {
+      name: display,
+      slug: cleanSlug,
+      norm,
+      compact,
+      tokens: norm ? norm.split(' ') : [],
+    });
+  };
+
+  // Seed with canonical special-adjustment names first
+  for (const [slug, display] of SLUG_TO_DISPLAY.entries()) {
+    addEntry(display, slug);
+  }
+  // Merge additional slugs or display names (e.g. from PokéAPI or presets)
+  for (const item of Array.isArray(rawItems) ? rawItems : []) {
+    if (typeof item === 'string' && item.trim()) {
+      const slug = normalizePokemonSlug(item);
+      addEntry(SLUG_TO_DISPLAY.get(slug) || formatSlugDisplayName(slug), slug);
+    } else if (item && typeof item === 'object' && item.slug) {
+      addEntry(item.name || SLUG_TO_DISPLAY.get(item.slug) || formatSlugDisplayName(item.slug), item.slug);
+    }
+  }
+  return [...bySlug.values()];
+}
+
+function boundedLevenshtein(a, b, maxDist = 2) {
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > maxDist) return maxDist + 1;
+  let prev = Array.from({ length: lb + 1 }, (_, j) => j);
+  let curr = new Array(lb + 1);
+  for (let i = 1; i <= la; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    const ca = a.charCodeAt(i - 1);
+    for (let j = 1; j <= lb; j++) {
+      const cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
+      const v = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      curr[j] = v;
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > maxDist) return maxDist + 1;
+    [prev, curr] = [curr, prev];
+  }
+  return prev[lb];
+}
+
+function scoreSubsequence(q, target) {
+  let qi = 0;
+  let streak = 0;
+  let score = 0;
+  let firstIdx = -1;
+  for (let ti = 0; ti < target.length && qi < q.length; ti++) {
+    if (target[ti] === q[qi]) {
+      if (firstIdx === -1) firstIdx = ti;
+      streak += 1;
+      score += 10 + streak * 4;
+      if (ti === 0) score += 15;
+      qi += 1;
+    } else {
+      streak = 0;
+    }
+  }
+  if (qi < q.length) return -1;
+  return 260 + score - firstIdx * 2 - Math.max(0, target.length - q.length);
+}
+
+/**
+ * Fuzzy-searches a Pokémon catalog (handles prefixes, token matches, subsequences,
+ * and typos up to edit distance 2). Returns up to `limit` { name, slug } entries.
+ */
+export function fuzzySearchPokemon(query, catalog, { limit = 6 } = {}) {
+  const qNorm = lookupKey(typeof query === 'string' ? query : '').replace(/[-_.'’:\s]+/g, ' ').trim();
+  const qCompact = qNorm.replace(/\s+/g, '');
+  if (!qCompact || !Array.isArray(catalog) || catalog.length === 0) return [];
+
+  const maxResults = Math.max(1, Math.min(20, Math.floor(Number(limit) || 6)));
+  const scored = [];
+
+  for (const item of catalog) {
+    if (!item || !item.compact) continue;
+    const { norm, compact, tokens, slug } = item;
+    // Slight tie-break penalty for niche/totem forms so standard forms appear first
+    const nichePenalty = /-(totem|starter|busted|gulping|gorging|limited-build|sprinting-build|swimming-build|gliding-build|low-power-mode|drive-mode|aquatic-mode|glide-mode)/.test(slug) ? 80 : 0;
+    const lenPenalty = Math.min(40, compact.length * 0.5);
+    let score = -1;
+
+    if (norm === qNorm || compact === qCompact) {
+      score = 1000;
+    } else if (norm.startsWith(qNorm) || compact.startsWith(qCompact)) {
+      score = 820 - lenPenalty;
+    } else if (tokens.some((t) => t.startsWith(qCompact))) {
+      score = 680 - lenPenalty;
+    } else {
+      const idx = compact.indexOf(qCompact);
+      if (idx !== -1) {
+        score = 540 - idx * 4 - lenPenalty;
+      } else {
+        const sub = scoreSubsequence(qCompact, compact);
+        if (sub > 0) {
+          score = sub;
+        } else if (qCompact.length >= 3) {
+          const maxDist = qCompact.length >= 5 ? 2 : 1;
+          const distFull = boundedLevenshtein(qCompact, compact, maxDist);
+          const distExactPrefix = compact.length >= qCompact.length
+            ? boundedLevenshtein(qCompact, compact.slice(0, qCompact.length), maxDist)
+            : maxDist + 1;
+          const distPlusOnePrefix = compact.length > qCompact.length
+            ? boundedLevenshtein(qCompact, compact.slice(0, qCompact.length + 1), maxDist)
+            : maxDist + 1;
+          const bestDist = Math.min(distFull, distExactPrefix, distPlusOnePrefix);
+          if (bestDist <= maxDist) {
+            score = 240 - bestDist * 55 - lenPenalty;
+          }
+        }
+      }
+    }
+
+    if (score > 0) {
+      scored.push({ name: item.name, slug: item.slug, score: score - nichePenalty });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name));
+  return scored.slice(0, maxResults).map(({ name, slug }) => ({ name, slug }));
 }

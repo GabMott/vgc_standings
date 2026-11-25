@@ -7,6 +7,7 @@ import {
   resolveTheme,
 } from '../src/adapters/themes.js';
 import {
+  REPO_WATERMARKS,
   drawRoundedRectPath,
   drawImageCover,
   drawImageContain,
@@ -31,7 +32,7 @@ function createMockCanvas() {
     closePath() { calls.push('closePath'); },
     moveTo() {},
     lineTo() {},
-    arc() {},
+    arc(x, y, r) { calls.push(['arc', x, y, r]); },
     arcTo() {},
     rect() {},
     clip() {},
@@ -39,8 +40,8 @@ function createMockCanvas() {
     stroke() { calls.push('stroke'); },
     fillRect() { calls.push('fillRect'); },
     clearRect() { calls.push('clearRect'); },
-    fillText(text) { calls.push(['fillText', text]); },
-    drawImage() { calls.push('drawImage'); },
+    fillText(text, x, y) { calls.push(['fillText', text, x, y]); },
+    drawImage(img, x, y, w, h) { calls.push(['drawImage', img, x, y, w, h]); },
     measureText(text) { return { width: String(text).length * 10 }; },
     createLinearGradient() { return { addColorStop() {} }; },
   };
@@ -53,8 +54,9 @@ function createMockCanvas() {
 }
 
 describe('themes', () => {
-  it('provides 7 built-in themes (3 Portland + 4 procedural)', () => {
-    assert.equal(BUILTIN_THEMES.length, 7);
+  it('provides Portland Dark as the sole built-in theme', () => {
+    assert.equal(BUILTIN_THEMES.length, 1);
+    assert.equal(BUILTIN_THEMES[0].id, 'portland-dark');
     const portlandDark = resolveTheme('portland-dark', {}, 'https://example.com/assets/');
     assert.equal(portlandDark.images.vgcIcon, 'https://example.com/assets/Pokemon%20VGC%20Icon.png');
     assert.equal(portlandDark.images.localIcon, 'https://example.com/assets/Portland%20VGC%20Icon.png');
@@ -95,14 +97,87 @@ describe('canvas-renderer', () => {
     assert.doesNotThrow(() => drawRoundedRectPath(ctx, 10, 10, 100, 50, 12));
   });
 
+  it('adds relative horizontal padding around bullet separators in the info banner', () => {
+    const theme = resolveTheme('portland-dark');
+    const canvas = createMockCanvas();
+    const t = createEmptyTournament({
+      event: { eventType: 'cup', location: 'Portland', date: '2026-10-11', regulation: 'M-A', playerCount: 64 },
+    });
+    renderStandingsCanvas(canvas, t, theme);
+    const textCalls = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'fillText');
+    const cupCall = textCalls.find((c) => c[1] === 'LEAGUE CUP');
+    const locCall = textCalls.find((c) => c[1] === 'PORTLAND');
+    assert.ok(cupCall && locCall, 'title parts should be rendered separately');
+    // Gap between end of 'LEAGUE CUP' (10 chars * 10px = 100px) and start of 'PORTLAND' should exceed single-space bullet
+    const gap = locCall[2] - (cupCall[2] + 100);
+    assert.ok(gap > 35 && gap < 120, `expected balanced separator padding, got gap=${gap}`);
+  });
+
+  it('supports name and team redaction with Trainer label and Pokéball filler sprites', () => {
+    const theme = resolveTheme('portland-dark', { pattern: 'none' });
+    const canvas = createMockCanvas();
+    const realSprite = { naturalWidth: 475, naturalHeight: 475, tag: 'real' };
+    const t = createEmptyTournament({
+      standings: [
+        createStandingEntry({
+          placing: '1',
+          name: 'Secret Player',
+          handle: '@secret',
+          redactName: true,
+          redactTeam: true,
+          pokemon: [
+            { name: 'Incineroar', speciesSlug: 'incineroar', spriteUrl: 'https://img/incin.png' },
+            { name: 'Charizard', speciesSlug: 'charizard', spriteUrl: 'https://img/zard.png' },
+          ],
+        }),
+      ],
+    });
+    renderStandingsCanvas(canvas, t, theme, {
+      sprites: { 'https://img/incin.png': realSprite, 'https://img/zard.png': realSprite },
+    });
+    const texts = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'fillText').map((c) => c[1]);
+    assert.ok(texts.includes('Trainer'));
+    assert.ok(!texts.includes('Secret Player'));
+    assert.ok(!texts.includes('@secret'));
+    const drawnImgs = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'drawImage').map((c) => c[1]);
+    assert.equal(drawnImgs.filter((img) => img === realSprite).length, 0);
+    // Each Pokéball filler sprite draws circular arcs (6 arc calls per Pokéball)
+    const arcCalls = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'arc');
+    assert.equal(arcCalls.length, 12);
+  });
+
+  it('draws original and fork GitHub watermarks in the bottom-left and omits the signature pill', () => {
+    const theme = resolveTheme('portland-dark');
+    const canvas = createMockCanvas();
+    renderStandingsCanvas(canvas, createEmptyTournament({ signature: 'Should Not Render' }), theme);
+    const drawnTexts = canvas.calls.filter((c) => Array.isArray(c) && c[0] === 'fillText').map((c) => c[1]);
+    assert.deepEqual([...REPO_WATERMARKS], ['github.com/JoshBell302', 'github.com/GabMott']);
+    assert.ok(drawnTexts.includes('github.com/JoshBell302'));
+    assert.ok(drawnTexts.includes('github.com/GabMott'));
+    assert.ok(!drawnTexts.includes('Should Not Render'));
+  });
+
+  it('positions header logos at equal distance from top and sides', () => {
+    const theme = resolveTheme('portland-dark');
+    const canvas = createMockCanvas();
+    const vgcIcon = { naturalWidth: 200, naturalHeight: 200, tag: 'vgc' };
+    const localIcon = { naturalWidth: 820, naturalHeight: 820, tag: 'local' };
+    renderStandingsCanvas(canvas, createEmptyTournament(), theme, { vgcIcon, localIcon });
+    const vgcDraw = canvas.calls.find((c) => Array.isArray(c) && c[0] === 'drawImage' && c[1] === vgcIcon);
+    const localDraw = canvas.calls.find((c) => Array.isArray(c) && c[0] === 'drawImage' && c[1] === localIcon);
+    assert.ok(vgcDraw && localDraw);
+    assert.equal(vgcDraw[2], vgcDraw[3]); // left margin === top margin
+    assert.equal(1500 - (localDraw[2] + localDraw[4]), localDraw[3]); // right margin === top margin
+  });
+
   it('renders cleanly across extreme and malformed inputs without ever throwing', () => {
-    const theme = resolveTheme('midnight-pokeball');
+    const theme = resolveTheme('portland-dark');
 
     // 1. Null / junk tournament
     const c1 = createMockCanvas();
     const r1 = renderStandingsCanvas(c1, null, null, null);
     assert.equal(r1.canvasWidth, 1500);
-    assert.equal(r1.canvasHeight, 1500);
+    assert.ok(r1.canvasHeight > 500);
 
     // 2. Empty standings (0 players)
     const c2 = createMockCanvas();
@@ -120,7 +195,7 @@ describe('canvas-renderer', () => {
     );
     const big = createEmptyTournament({
       event: {
-        eventType: 'custom',
+        eventType: 'other',
         customEventLabel: 'EXTREMELY LONG CUSTOM TOURNAMENT LABEL '.repeat(5),
         location: 'A'.repeat(200),
         date: 'December 31st, 2026',
@@ -135,6 +210,6 @@ describe('canvas-renderer', () => {
     });
     assert.equal(c3.width, 1500);
     assert.ok(r3.canvasHeight > 1500);
-    assert.ok(c3.calls.includes('drawImage'));
+    assert.ok(c3.calls.some((c) => Array.isArray(c) && c[0] === 'drawImage'));
   });
 });

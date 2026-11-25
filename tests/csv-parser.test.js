@@ -90,16 +90,16 @@ describe('parseStandingsCsv', () => {
     const csv = DATA_CSV.replace('Wyndon Stadium,July 8th,,x,', 'Wyndon Stadium,July 8th,x,,');
     assert.equal(parseStandingsCsv(csv).tournament.event.eventType, 'challenge');
   });
-  test('both or neither -> local', () => {
+  test('both or neither -> other', () => {
     const both = DATA_CSV.replace('July 8th,,x,', 'July 8th,x,x,');
     const neither = DATA_CSV.replace('July 8th,,x,', 'July 8th,,,');
-    assert.equal(parseStandingsCsv(both).tournament.event.eventType, 'local');
-    assert.equal(parseStandingsCsv(neither).tournament.event.eventType, 'local');
+    assert.equal(parseStandingsCsv(both).tournament.event.eventType, 'other');
+    assert.equal(parseStandingsCsv(neither).tournament.event.eventType, 'other');
   });
   test("'false' / '0' / 'no' in challenge/cup are falsy", () => {
     for (const falsy of ['false', 'FALSE', '0', 'no', 'No', 'n', 'off']) {
       const csv = DATA_CSV.replace('July 8th,,x,', `July 8th,${falsy},${falsy},`);
-      assert.equal(parseStandingsCsv(csv).tournament.event.eventType, 'local', falsy);
+      assert.equal(parseStandingsCsv(csv).tournament.event.eventType, 'other', falsy);
       const cupOnly = DATA_CSV.replace('July 8th,,x,', `July 8th,${falsy},yes,`);
       assert.equal(parseStandingsCsv(cupOnly).tournament.event.eventType, 'cup', falsy);
     }
@@ -118,7 +118,7 @@ describe('parseStandingsCsv', () => {
     assert.ok(warnings.some((w) => /Event info row missing/.test(w)));
     assert.equal(tournament.standings.length, 2);
     assert.equal(tournament.event.playerCount, 2);
-    assert.equal(tournament.event.eventType, 'local');
+    assert.equal(tournament.event.eventType, 'cup');
   });
   test('metadata header but no values row', () => {
     const csv = 'location,date,challenge,cup,regulation,player count\nplacing,name,handle,local,paste,\n1,Ash,ash,,https://pokepast.es/abc,';
@@ -279,8 +279,8 @@ describe('exportStandingsCsv', () => {
       assert.ok(out.startsWith('location,date,challenge,cup,regulation,player count\r\n'));
     }
   });
-  test('local event / zero player count export blanks', () => {
-    const out = exportStandingsCsv({ event: { eventType: 'local', location: 'L', playerCount: 0 }, standings: [] });
+  test('other event / zero player count export blanks', () => {
+    const out = exportStandingsCsv({ event: { eventType: 'other', location: 'L', playerCount: 0 }, standings: [] });
     assert.equal(out.split('\r\n')[1], 'L,,,,,');
   });
 });

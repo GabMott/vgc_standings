@@ -13,115 +13,91 @@
 
   <header class="app-header">
     <h1>VGC Standings Generator</h1>
-    <div class="toolbar" role="toolbar" aria-label="File actions">
-      <button type="button" id="btn-sample">Load Sample (Masters Eight)</button>
-      <button type="button" id="btn-import-csv">Import CSV</button>
-      <button type="button" id="btn-export-csv">Export CSV</button>
-      <button type="button" id="btn-import-json">Import JSON</button>
-      <button type="button" id="btn-export-json">Export JSON</button>
-      <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
-      <input type="file" id="file-json" accept=".json,application/json" hidden>
+    <!-- Testing-only preset selector (uncomment to re-enable)
+    <div class="toolbar presets" role="group" aria-labelledby="presets-label">
+      <label id="presets-label" for="presets-select">Preset</label>
+      <select id="presets-select"></select>
+    </div>
+    -->
+    <div class="toolbar" role="toolbar" aria-label="Tournament actions">
+      <button type="button" id="btn-upload">Upload</button>
+      <button type="button" id="btn-export">Export</button>
+      <button type="button" id="btn-draft-new" title="Reset all fields to defaults without deleting saved drafts">Clear Fields</button>
     </div>
     <div class="toolbar drafts" role="group" aria-labelledby="drafts-label">
-      <label id="drafts-label" for="drafts-select">Saved drafts</label>
-      <select id="drafts-select"><option value="">— none —</option></select>
-      <button type="button" id="btn-draft-save">Save</button>
-      <button type="button" id="btn-draft-new">New</button>
-      <button type="button" id="btn-draft-delete" class="danger">Delete</button>
+      <label id="drafts-label" for="drafts-select">Drafts</label>
+      <select id="drafts-select" aria-label="Saved drafts"><option value="">No saved drafts</option></select>
+      <button type="button" id="btn-draft-save" title="Save current standings as a draft in this browser">Save Draft</button>
+      <button type="button" id="btn-draft-delete" class="danger" title="Delete the selected saved draft from this browser" disabled>Delete Draft</button>
     </div>
   </header>
 
   <main id="workspace" class="workspace">
     <div class="controls">
       <section class="card" aria-labelledby="h-meta">
-        <h2 id="h-meta">Tournament Metadata</h2>
+        <h2 id="h-meta">Details</h2>
         <div class="grid-2">
           <div class="field">
             <label for="f-eventType">Event type</label>
-            <p class="hint" id="h-eventType">Sets the banner title.</p>
-            <select id="f-eventType" aria-describedby="h-eventType e-eventType">
-              <option value="challenge">Challenge</option>
+            <select id="f-eventType" aria-describedby="e-eventType">
               <option value="cup">Cup</option>
-              <option value="local" selected>Local</option>
-              <option value="custom">Custom</option>
+              <option value="challenge" selected>Challenge</option>
+              <option value="other">Other</option>
             </select>
             <p class="error-msg" id="e-eventType" data-error></p>
           </div>
           <div class="field" id="wrap-customLabel" hidden>
-            <label for="f-customLabel">Custom event label</label>
-            <p class="hint" id="h-customLabel">e.g. "Regional Qualifier".</p>
-            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="h-customLabel e-customLabel">
+            <label for="f-customLabel">Event label</label>
+            <input id="f-customLabel" type="text" maxlength="60" aria-describedby="e-customLabel">
             <p class="error-msg" id="e-customLabel" data-error></p>
           </div>
           <div class="field">
             <label for="f-location">Location</label>
-            <p class="hint" id="h-location">City, venue or store name.</p>
-            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="h-location e-location">
+            <input id="f-location" type="text" maxlength="80" autocomplete="off" aria-describedby="e-location">
             <p class="error-msg" id="e-location" data-error></p>
           </div>
           <div class="field">
             <label for="f-date">Date</label>
-            <p class="hint" id="h-date">Free text, e.g. "July 8th".</p>
-            <input id="f-date" type="text" maxlength="40" autocomplete="off" aria-describedby="h-date e-date">
+            <input id="f-date" type="date" aria-describedby="e-date">
             <p class="error-msg" id="e-date" data-error></p>
           </div>
           <div class="field">
             <label for="f-regulation">Regulation</label>
-            <p class="hint" id="h-regulation">e.g. "M-8" or "G".</p>
-            <input id="f-regulation" type="text" maxlength="20" autocomplete="off" aria-describedby="h-regulation e-regulation">
+            <select id="f-regulation" aria-describedby="e-regulation">
+              <option value="">— None —</option>
+              <option value="M-A">M-A</option>
+              <option value="M-B">M-B</option>
+              <option value="M-C" selected>M-C</option>
+              <option value="M-D">M-D</option>
+              <option value="Other">Other</option>
+            </select>
             <p class="error-msg" id="e-regulation" data-error></p>
           </div>
           <div class="field">
             <label for="f-playerCount">Player count</label>
-            <p class="hint" id="h-playerCount">Total attendees (0–9999). 0 hides it.</p>
-            <input id="f-playerCount" type="number" min="0" max="9999" step="1" inputmode="numeric" aria-describedby="h-playerCount e-playerCount">
+            <div class="stepper">
+              <button type="button" id="btn-playerCount-dec" class="stepper-btn" aria-label="Decrease player count">−</button>
+              <input id="f-playerCount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="0" aria-describedby="e-playerCount">
+              <button type="button" id="btn-playerCount-inc" class="stepper-btn" aria-label="Increase player count">+</button>
+            </div>
             <p class="error-msg" id="e-playerCount" data-error></p>
           </div>
-          <div class="field span-2">
-            <label for="f-signature">Signature text</label>
-            <p class="hint" id="h-signature">Shown at the bottom of the image. Leave blank to hide.</p>
-            <input id="f-signature" type="text" maxlength="80" autocomplete="off" aria-describedby="h-signature e-signature">
-            <p class="error-msg" id="e-signature" data-error></p>
-          </div>
         </div>
-      </section>
-
-      <section class="card" aria-labelledby="h-theme">
-        <h2 id="h-theme">Theme &amp; Assets</h2>
-        <div class="grid-2">
-          <div class="field span-2">
-            <label for="f-theme">Theme</label>
-            <p class="hint" id="h-theme-hint">Three Portland VGC themes and four procedural ones.</p>
-            <select id="f-theme" aria-describedby="h-theme-hint"></select>
-          </div>
-          <div class="field span-2">
-            <label class="check"><input type="checkbox" id="f-customColors"> Use custom colors</label>
-            <p class="hint" id="h-colors">Color 1 drives gradients' start, Color 2 the end and accent.</p>
-          </div>
-          <div class="field">
-            <label for="f-color1">Color 1</label>
-            <input id="f-color1" type="color" value="#101a2e" aria-describedby="h-colors">
-          </div>
-          <div class="field">
-            <label for="f-color2">Color 2</label>
-            <input id="f-color2" type="color" value="#d8b45a" aria-describedby="h-colors">
-          </div>
-        </div>
-        <fieldset class="uploads">
-          <legend>Custom images (optional)</legend>
-          <p class="hint">PNG, JPEG, WebP or GIF, up to 10 MB. Images stay in your browser and are not saved with drafts.</p>
-          <div id="upload-list" class="upload-list"></div>
-        </fieldset>
       </section>
 
       <section class="card" aria-labelledby="h-players">
         <div class="card-head">
           <h2 id="h-players">Standings / Players</h2>
-          <button type="button" id="btn-add-player" class="primary">Add Player</button>
+          <div class="top-cut-control">
+            <label for="f-topCut">Top Cut</label>
+            <select id="f-topCut" aria-label="Top Cut">
+              <option value="2" selected>2</option>
+              <option value="4">4</option>
+              <option value="8">8</option>
+            </select>
+          </div>
         </div>
-        <p class="hint">Team Source accepts a pokepast.es link or pasted Showdown text.</p>
         <ol id="players" class="players" aria-live="off"></ol>
-        <p id="players-empty" class="muted" hidden>No players yet. Add one to get started.</p>
       </section>
     </div>
 
@@ -136,14 +112,72 @@
           <button type="button" id="btn-download" class="primary">Download PNG</button>
         </div>
         <div id="status" class="status" role="status"></div>
-        <ul id="warnings" class="warning-list"></ul>
-        <details id="analytics" class="analytics">
-          <summary>Tournament Analytics Preview</summary>
-          <div id="analytics-body"></div>
-        </details>
+        <ul id="warnings" class="warning-list" hidden></ul>
       </div>
     </aside>
   </main>
+
+  <dialog id="dialog-upload" class="modal" aria-labelledby="h-dialog-upload">
+    <div class="modal-card">
+      <h2 id="h-dialog-upload">Upload Standings</h2>
+      <p class="modal-note">Accepted file types: <strong>.csv</strong> or <strong>.json</strong>.</p>
+      <input type="file" id="file-upload" accept=".csv,.json,text/csv,text/comma-separated-values,application/csv,application/json">
+      <div class="modal-actions">
+        <button type="button" id="btn-upload-cancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-export" class="modal" aria-labelledby="h-dialog-export">
+    <div class="modal-card">
+      <h2 id="h-dialog-export">Export Standings</h2>
+      <p class="modal-note">Choose an export format:</p>
+      <div class="modal-choices">
+        <button type="button" id="btn-export-csv" class="primary">Export CSV (.csv)</button>
+        <button type="button" id="btn-export-json" class="primary">Export JSON (.json)</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-export-cancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-save-draft" class="modal" aria-labelledby="h-dialog-save-draft">
+    <div class="modal-card">
+      <h2 id="h-dialog-save-draft">Save Draft</h2>
+      <div class="field">
+        <label for="f-draftName">Draft name</label>
+        <input id="f-draftName" type="text" maxlength="80" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-save-draft-cancel">Cancel</button>
+        <button type="button" id="btn-save-draft-confirm" class="primary">Save</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-clear" class="modal" aria-labelledby="h-dialog-clear">
+    <div class="modal-card">
+      <h2 id="h-dialog-clear">Clear Fields?</h2>
+      <p class="modal-note">This will reset all event details and player entries back to defaults. Your saved drafts will not be affected.</p>
+      <div class="modal-actions">
+        <button type="button" id="btn-clear-cancel">Cancel</button>
+        <button type="button" id="btn-clear-confirm" class="danger-solid">Clear Fields</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-download-warn" class="modal" aria-labelledby="h-dialog-download-warn">
+    <div class="modal-card">
+      <h2 id="h-dialog-download-warn">Incomplete Standings</h2>
+      <p class="modal-note">Some fields are missing or incomplete:</p>
+      <ul id="download-warn-list" class="modal-warn-list"></ul>
+      <div class="modal-actions">
+        <button type="button" id="btn-download-warn-cancel">Go Back</button>
+        <button type="button" id="btn-download-warn-confirm" class="primary">Download Anyway</button>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="../src/app.js"></script>
 </body>

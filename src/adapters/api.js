@@ -8,11 +8,33 @@ export class PokeApiClient {
     this.pokeApiBase = String(pokeApiBase).replace(/\/+$/, '');
     this.pasteCache = new Map();
     this.spriteCache = new Map();
+    this.catalogPromise = null;
   }
 
   clearCache() {
     this.pasteCache.clear();
     this.spriteCache.clear();
+    this.catalogPromise = null;
+  }
+
+  /** Fetches the full PokéAPI Pokémon slug list once and caches it. Never throws. */
+  async fetchPokemonCatalog() {
+    if (this.catalogPromise) return this.catalogPromise;
+    this.catalogPromise = (async () => {
+      try {
+        const res = await this.fetchWithTimeout(`${this.pokeApiBase}/pokemon?limit=2000`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data?.results)
+          ? data.results.map((r) => (typeof r?.name === 'string' ? r.name : '')).filter(Boolean)
+          : [];
+      } catch {
+        return [];
+      }
+    })();
+    const list = await this.catalogPromise;
+    if (list.length === 0) this.catalogPromise = null;
+    return list;
   }
 
   async fetchWithTimeout(url) {
@@ -51,12 +73,12 @@ export class PokeApiClient {
     if (!clean) return { url: null, warning: 'Missing Pokémon name.' };
     const cacheKey = `${clean}|${shiny ? 's' : 'n'}`;
     if (this.spriteCache.has(cacheKey)) return this.spriteCache.get(cacheKey);
-    const promise = this.#loadSprite(clean, shiny);
+    const promise = this._loadSprite(clean, shiny);
     this.spriteCache.set(cacheKey, promise);
     return promise;
   }
 
-  async #loadSprite(slug, shiny) {
+  async _loadSprite(slug, shiny) {
     try {
       const res = await this.fetchWithTimeout(`${this.pokeApiBase}/pokemon/${encodeURIComponent(slug)}`);
       if (!res.ok) return { url: null, warning: `Sprite not found for "${slug}" (${res.status}).` };

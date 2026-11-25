@@ -8,7 +8,9 @@ export const MAX_PLAYER_COUNT = 9999;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMAGE_DIMENSION = 8000;
 export const ALLOWED_IMAGE_TYPES = Object.freeze(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
-export const EVENT_TYPES = Object.freeze(['challenge', 'cup', 'local', 'custom']);
+export const EVENT_TYPES = Object.freeze(['cup', 'challenge', 'other']);
+export const REGULATION_OPTIONS = Object.freeze(['M-A', 'M-B', 'M-C', 'M-D', 'Other']);
+export const TOP_CUT_OPTIONS = Object.freeze([2, 4, 8]);
 
 function toStringSafe(value) {
   if (typeof value === 'string') return value;
@@ -147,8 +149,8 @@ export function validateTournament(tournament) {
     errors.push('Tournament event is required.');
   } else {
     if (!EVENT_TYPES.includes(event.eventType)) errors.push(`Invalid eventType: ${String(event.eventType)}.`);
-    if (event.eventType === 'custom' && !sanitizeText(event.customEventLabel)) {
-      warnings.push('Custom event has no label.');
+    if (event.eventType === 'other' && !sanitizeText(event.customEventLabel)) {
+      warnings.push('Other event has no label.');
     }
     if (!Number.isInteger(event.playerCount) || event.playerCount < 0) errors.push('event.playerCount must be a non-negative integer.');
   }

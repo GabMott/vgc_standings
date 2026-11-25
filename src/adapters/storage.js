@@ -2,30 +2,32 @@ import { serializeTournament, deserializeTournament } from '../core/schema.js';
 
 /** Store interface: async list(), get(id), save(tournament), delete(id), clear(). */
 export class MemoryTournamentStore {
-  #items = new Map();
+  constructor() {
+    this._items = new Map();
+  }
 
   async list() {
-    return [...this.#items.values()].map((s) => deserializeTournament(s));
+    return [...this._items.values()].map((s) => deserializeTournament(s));
   }
 
   async get(id) {
-    const raw = this.#items.get(id);
+    const raw = this._items.get(id);
     return raw ? deserializeTournament(raw) : null;
   }
 
   async save(tournament) {
     const raw = serializeTournament(tournament);
     const record = deserializeTournament(raw);
-    this.#items.set(record.id, raw);
+    this._items.set(record.id, raw);
     return record;
   }
 
   async delete(id) {
-    return this.#items.delete(id);
+    return this._items.delete(id);
   }
 
   async clear() {
-    this.#items.clear();
+    this._items.clear();
   }
 }
 
@@ -44,7 +46,7 @@ export class LocalStorageTournamentStore {
     }
   }
 
-  #keys() {
+  _keys() {
     const s = this.storage;
     if (!s) return [];
     const keys = [];
@@ -59,7 +61,7 @@ export class LocalStorageTournamentStore {
     return keys;
   }
 
-  #read(key) {
+  _read(key) {
     try {
       const raw = this.storage?.getItem(key);
       return raw ? deserializeTournament(raw) : null;
@@ -69,11 +71,11 @@ export class LocalStorageTournamentStore {
   }
 
   async list() {
-    return this.#keys().map((k) => this.#read(k)).filter(Boolean);
+    return this._keys().map((k) => this._read(k)).filter(Boolean);
   }
 
   async get(id) {
-    return this.#read(this.prefix + id);
+    return this._read(this.prefix + id);
   }
 
   /** Returns the saved record, or null if storage is unavailable or full. */
@@ -103,7 +105,7 @@ export class LocalStorageTournamentStore {
 
   async clear() {
     try {
-      for (const k of this.#keys()) this.storage.removeItem(k);
+      for (const k of this._keys()) this.storage.removeItem(k);
     } catch {
       /* ignore */
     }

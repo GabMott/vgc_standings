@@ -16,6 +16,7 @@ const ROOT = path.resolve(__dirname, '..');
 const MODULE_ORDER = [
   'src/core/validation.js',
   'src/core/pokemon-names.js',
+  'src/core/regulations.js',
   'src/core/schema.js',
   'src/core/pokepaste.js',
   'src/core/csv-parser.js',
@@ -23,6 +24,7 @@ const MODULE_ORDER = [
   'src/adapters/storage.js',
   'src/adapters/api.js',
   'src/adapters/themes.js',
+  'src/adapters/presets.js',
   'src/renderer/canvas-renderer.js',
   'src/app.js',
 ];
@@ -73,9 +75,11 @@ function build() {
   fs.mkdirSync(distDir, { recursive: true });
   const outPath = path.join(distDir, 'vgc-standings.html');
   fs.writeFileSync(outPath, singleFileHtml, 'utf8');
+  const pagesPath = path.join(ROOT, 'index.html');
+  fs.writeFileSync(pagesPath, singleFileHtml, 'utf8');
 
   const kb = (Buffer.byteLength(singleFileHtml, 'utf8') / 1024).toFixed(1);
-  console.log(`Built single-file Gist app: ${path.relative(ROOT, outPath)} (${kb} KB)`);
+  console.log(`Built single-file app: ${path.relative(ROOT, outPath)} and ${path.relative(ROOT, pagesPath)} (${kb} KB)`);
 }
 
 build();

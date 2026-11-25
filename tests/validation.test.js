@@ -13,7 +13,7 @@ describe('constants', () => {
     assert.equal(MAX_IMAGE_DIMENSION, 8000);
     assert.ok(Object.isFrozen(ALLOWED_IMAGE_TYPES));
     assert.ok(Object.isFrozen(EVENT_TYPES));
-    assert.deepEqual([...EVENT_TYPES], ['challenge', 'cup', 'local', 'custom']);
+    assert.deepEqual([...EVENT_TYPES], ['cup', 'challenge', 'other']);
   });
 });
 
@@ -316,10 +316,10 @@ describe('validateTournament', () => {
     assert.equal(r.errors.length, 2);
     r = validateTournament(base({ event: { eventType: 'cup', playerCount: 1.5 } }));
     assert.equal(r.valid, false);
-    r = validateTournament(base({ event: { eventType: 'custom', customEventLabel: '  ', playerCount: 8 } }));
+    r = validateTournament(base({ event: { eventType: 'other', customEventLabel: '  ', playerCount: 8 } }));
     assert.equal(r.valid, true);
-    assert.ok(r.warnings.includes('Custom event has no label.'));
-    r = validateTournament(base({ event: { eventType: 'custom', customEventLabel: 'Hi', playerCount: 8 } }));
+    assert.ok(r.warnings.includes('Other event has no label.'));
+    r = validateTournament(base({ event: { eventType: 'other', customEventLabel: 'Hi', playerCount: 8 } }));
     assert.deepEqual(r.warnings, []);
   });
   test('empty standings warning', () => {

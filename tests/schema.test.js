@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SCHEMA_VERSION, DEFAULT_SIGNATURE, DEFAULT_THEME_ID, MAX_POKEMON_PER_TEAM, generateId,
   createPokemonSet, createStandingEntry, createEmptyTournament,
-  serializeTournament, deserializeTournament, formatEventTitle, formatEventSubtitle,
+  serializeTournament, deserializeTournament, formatEventTitle, formatEventDate, formatEventSubtitle,
   computeTournamentSummary,
 } from '../src/core/schema.js';
 import { validateTournament } from '../src/core/validation.js';
@@ -136,7 +136,7 @@ describe('createEmptyTournament', () => {
     const t = createEmptyTournament();
     assert.equal(t.schemaVersion, SCHEMA_VERSION);
     assert.ok(t.id);
-    assert.equal(t.event.eventType, 'local');
+    assert.equal(t.event.eventType, 'cup');
     assert.equal(t.event.playerCount, 0);
     assert.deepEqual(t.standings, []);
     assert.equal(t.themeConfig.themeId, DEFAULT_THEME_ID);
@@ -161,11 +161,11 @@ describe('createEmptyTournament', () => {
   });
   test('invalid values fall back', () => {
     const t = createEmptyTournament({ event: { eventType: 'bogus' }, createdAt: 'garbage', signature: 5, standings: 'x' });
-    assert.equal(t.event.eventType, 'local');
+    assert.equal(t.event.eventType, 'cup');
     assert.ok(!Number.isNaN(Date.parse(t.createdAt)));
     assert.equal(t.signature, DEFAULT_SIGNATURE);
     assert.deepEqual(t.standings, []);
-    assert.equal(createEmptyTournament(null).event.eventType, 'local');
+    assert.equal(createEmptyTournament(null).event.eventType, 'cup');
   });
   test('empty signature allowed', () => {
     assert.equal(createEmptyTournament({ signature: '' }).signature, '');
@@ -265,30 +265,47 @@ describe('serialize / deserialize', () => {
 
 describe('formatEventTitle', () => {
   test('event types', () => {
-    assert.equal(formatEventTitle({ eventType: 'challenge' }), 'VG LEAGUE CHALLENGE');
-    assert.equal(formatEventTitle({ eventType: 'cup' }), 'VG LEAGUE CUP');
-    assert.equal(formatEventTitle({ eventType: 'local' }), 'VG LEAGUE LOCAL');
-    assert.equal(formatEventTitle({ eventType: 'bogus' }), 'VG LEAGUE LOCAL');
-    assert.equal(formatEventTitle({}), 'VG LEAGUE LOCAL');
+    assert.equal(formatEventTitle({ eventType: 'challenge' }), 'LEAGUE CHALLENGE');
+    assert.equal(formatEventTitle({ eventType: 'cup' }), 'LEAGUE CUP');
+    assert.equal(formatEventTitle({ eventType: 'other' }), 'EVENT');
+    assert.equal(formatEventTitle({ eventType: 'bogus' }), 'EVENT');
+    assert.equal(formatEventTitle({}), 'EVENT');
   });
-  test('custom', () => {
-    assert.equal(formatEventTitle({ eventType: 'custom', customEventLabel: 'my cup' }), 'MY CUP');
-    assert.equal(formatEventTitle({ eventType: 'custom', customEventLabel: '' }), 'EVENT');
-    assert.equal(formatEventTitle({ eventType: 'custom' }), 'EVENT');
+  test('other', () => {
+    assert.equal(formatEventTitle({ eventType: 'other', customEventLabel: 'my cup' }), 'MY CUP');
+    assert.equal(formatEventTitle({ eventType: 'other', customEventLabel: '' }), 'EVENT');
+    assert.equal(formatEventTitle({ eventType: 'other' }), 'EVENT');
   });
   test('with location', () => {
-    assert.equal(formatEventTitle({ eventType: 'cup', location: 'Wyndon Stadium' }), 'VG LEAGUE CUP • WYNDON STADIUM');
-    assert.equal(formatEventTitle({ eventType: 'custom', customEventLabel: 'x', location: 'y' }), 'X • Y');
-    assert.equal(formatEventTitle({ eventType: 'cup', location: '   ' }), 'VG LEAGUE CUP');
+    assert.equal(formatEventTitle({ eventType: 'cup', location: 'Wyndon Stadium' }), 'LEAGUE CUP • WYNDON STADIUM');
+    assert.equal(formatEventTitle({ eventType: 'other', customEventLabel: 'x', location: 'y' }), 'X • Y');
+    assert.equal(formatEventTitle({ eventType: 'cup', location: '   ' }), 'LEAGUE CUP');
   });
   test('junk input', () => {
-    for (const v of [null, undefined, 5, 'x', []]) assert.equal(formatEventTitle(v), 'VG LEAGUE LOCAL');
+    for (const v of [null, undefined, 5, 'x', []]) assert.equal(formatEventTitle(v), 'EVENT');
+  });
+});
+
+describe('formatEventDate', () => {
+  test('formats ISO YYYY-MM-DD dates consistently', () => {
+    assert.equal(formatEventDate('2026-07-08'), 'July 8, 2026');
+    assert.equal(formatEventDate('2026-01-01'), 'January 1, 2026');
+    assert.equal(formatEventDate('2024-02-29'), 'February 29, 2024');
+    assert.equal(formatEventDate('2026-12-31'), 'December 31, 2026');
+  });
+  test('preserves legacy free-text dates and invalid calendar dates as-is', () => {
+    assert.equal(formatEventDate('July 8th'), 'July 8th');
+    assert.equal(formatEventDate('2026-02-30'), '2026-02-30');
+    assert.equal(formatEventDate('2026-13-01'), '2026-13-01');
+    assert.equal(formatEventDate(''), '');
+    assert.equal(formatEventDate(null), '');
   });
 });
 
 describe('formatEventSubtitle', () => {
   test('all parts', () => {
     assert.equal(formatEventSubtitle({ date: 'July 8th', regulation: 'M-8', playerCount: 8 }), 'July 8th • Regulation M-8 • 8 Players');
+    assert.equal(formatEventSubtitle({ date: '2026-07-08', regulation: 'M-A', playerCount: 16 }), 'July 8, 2026 • Regulation M-A • 16 Players');
   });
   test('1 Player vs N Players', () => {
     assert.equal(formatEventSubtitle({ playerCount: 1 }), '1 Player');

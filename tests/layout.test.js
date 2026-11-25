@@ -12,6 +12,8 @@ import {
   computeRhombusGeometry,
   computeLayout,
   computeSpriteSlots,
+  computeGlobalSpriteScale,
+  computeEqualGapSpriteRow,
 } from '../src/core/layout.js';
 
 describe('fitTextToWidth', () => {
@@ -98,11 +100,12 @@ describe('fitTextToWidth', () => {
 });
 
 describe('computeRhombusGeometry', () => {
-  it('returns 4 vertices and positive textMaxWidth', () => {
+  it('returns 4 vertices centered on the header/background seam with positive textMaxWidth', () => {
     const geo = computeRhombusGeometry(CANVAS_WIDTH, HEADER_HEIGHT);
     assert.equal(geo.points.length, 4);
     assert.ok(geo.textMaxWidth > 0);
     assert.ok(geo.topY < geo.dividerY && geo.dividerY < geo.bottomY);
+    assert.equal((geo.topY + geo.bottomY) / 2, HEADER_HEIGHT);
   });
 });
 
@@ -113,14 +116,16 @@ describe('computeLayout', () => {
     assert.equal(layout.columns, 0);
     assert.equal(layout.rows, 0);
     assert.equal(layout.canvasWidth, CANVAS_WIDTH);
-    assert.equal(layout.canvasHeight, BASE_CANVAS_HEIGHT);
+    assert.ok(layout.canvasHeight > HEADER_HEIGHT);
   });
 
-  it('uses symmetrical single-column margins for 1 and 2 players', () => {
+  it('uses symmetrical centered single-column cards matching 4/8-player width for 1 and 2 players', () => {
+    const fourPlayerWidth = computeLayout({ playerCount: 4 }).cardWidth;
     for (const count of [1, 2]) {
       const layout = computeLayout({ playerCount: count });
       assert.equal(layout.columns, 1);
       assert.equal(layout.cards.length, count);
+      assert.equal(layout.cardWidth, fourPlayerWidth);
       const card = layout.cards[0];
       const leftMargin = card.left;
       const rightMargin = layout.canvasWidth - card.right;
@@ -139,31 +144,44 @@ describe('computeLayout', () => {
     }
   });
 
-  it('never overlaps cards and dynamically expands canvas height for large player counts', () => {
-    for (const count of [4, 8, 16, 32]) {
-      const layout = computeLayout({ playerCount: count, hasSignature: true });
-      assert.equal(layout.cards.length, count);
-      assert.ok(layout.cardHeight >= STANDINGS_MIN_CARD_HEIGHT);
+  it('scales canvas height to fit players and centers cards between info banner and bottom', () => {
+    const geo = computeRhombusGeometry(CANVAS_WIDTH, HEADER_HEIGHT);
+    for (const hasSignature of [true, false]) {
+      const heights = [];
+      for (const count of [1, 2, 4, 8, 16, 32]) {
+        const layout = computeLayout({ playerCount: count, hasSignature });
+        heights.push(layout.canvasHeight);
+        assert.equal(layout.cards.length, count);
+        assert.ok(layout.cardHeight >= STANDINGS_MIN_CARD_HEIGHT);
 
-      // Verify no card overlaps signature area at the bottom
-      const maxBottom = Math.max(...layout.cards.map((c) => c.bottom));
-      assert.ok(
-        maxBottom <= layout.canvasHeight - SIGNATURE_RESERVED_HEIGHT - STANDINGS_GAP + 1,
-        `count=${count}: bottom ${maxBottom} exceeded limit`,
-      );
+        const topGap = layout.cards[0].top - geo.bottomY;
+        const maxBottom = Math.max(...layout.cards.map((c) => c.bottom));
+        const bottomGap = layout.canvasHeight - maxBottom;
+        assert.ok(
+          Math.abs(topGap - bottomGap) <= 1,
+          `count=${count} sig=${hasSignature}: topGap=${topGap} vs bottomGap=${bottomGap}`,
+        );
+        if (hasSignature) {
+          assert.ok(
+            maxBottom <= layout.canvasHeight - SIGNATURE_RESERVED_HEIGHT,
+            `count=${count}: bottom ${maxBottom} overlapped signature area`,
+          );
+        }
 
-      // Verify no two cards overlap
-      for (let i = 0; i < layout.cards.length; i++) {
-        for (let j = i + 1; j < layout.cards.length; j++) {
-          const a = layout.cards[i];
-          const b = layout.cards[j];
-          const overlaps = a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-          assert.equal(overlaps, false, `Cards ${i} and ${j} overlap for count=${count}`);
+        // Verify no two cards overlap
+        for (let i = 0; i < layout.cards.length; i++) {
+          for (let j = i + 1; j < layout.cards.length; j++) {
+            const a = layout.cards[i];
+            const b = layout.cards[j];
+            const overlaps = a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+            assert.equal(overlaps, false, `Cards ${i} and ${j} overlap for count=${count}`);
+          }
         }
       }
+      // Height scales up as row count increases (1 row < 2 rows < 4 rows < 8 rows < 16 rows)
+      assert.ok(heights[0] < heights[2] && heights[2] < heights[3] && heights[3] < heights[4] && heights[4] < heights[5]);
+      assert.ok(heights[5] > BASE_CANVAS_HEIGHT);
     }
-    const large = computeLayout({ playerCount: 32 });
-    assert.ok(large.canvasHeight > BASE_CANVAS_HEIGHT);
   });
 });
 
@@ -192,5 +210,79 @@ describe('computeSpriteSlots', () => {
 
   it('returns empty array if card height is too small for any sprite', () => {
     assert.deepEqual(computeSpriteSlots({ x: 0, y: 0, width: 500, height: 50 }, 60, 6), []);
+  });
+});
+
+describe('computeEqualGapSpriteRow', () => {
+  const card = { x: 50, y: 600, width: 675, height: 200 };
+
+  it('produces equal visual gaps between adjacent sprites of mixed aspect ratios', () => {
+    const items = [
+      { sw: 180, sh: 420 }, // tall narrow (e.g. Farigiraf)
+      { sw: 400, sh: 300 }, // wide (e.g. Charizard)
+      { sw: 240, sh: 380 }, // tall
+      { sw: 360, sh: 260 }, // wide
+      { sw: 220, sh: 300 }, // medium
+      { sw: 320, sh: 320 }, // square
+    ];
+    const slots = computeEqualGapSpriteRow(card, 68, items);
+    assert.equal(slots.length, 6);
+    const gaps = [];
+    for (let i = 1; i < slots.length; i++) {
+      gaps.push(slots[i].x - (slots[i - 1].x + slots[i - 1].width));
+    }
+    for (const g of gaps) {
+      assert.ok(g >= 13.9, `expected gap >= minGap, got ${g}`);
+      assert.ok(Math.abs(g - gaps[0]) < 0.01, `expected equal gaps, got ${gaps}`);
+    }
+    // Stays cleanly inside card bounds and centered horizontally
+    const leftMargin = slots[0].x - card.x;
+    const rightMargin = (card.x + card.width) - (slots[5].x + slots[5].width);
+    assert.ok(Math.abs(leftMargin - rightMargin) < 0.01);
+    for (const s of slots) {
+      assert.ok(s.y >= card.y + 68);
+      assert.ok(s.y + s.height <= card.y + card.height);
+    }
+  });
+
+  it('keeps identical sprites the exact same size across cards using computeGlobalSpriteScale', () => {
+    const charizard = { sw: 420, sh: 340 };
+    const narrowTeam = [{ sw: 150, sh: 420 }, { sw: 180, sh: 400 }, charizard, { sw: 200, sh: 360 }, { sw: 210, sh: 350 }, { sw: 200, sh: 380 }];
+    const wideTeam = [{ sw: 430, sh: 300 }, charizard, { sw: 440, sh: 310 }, { sw: 420, sh: 300 }, { sw: 430, sh: 320 }, { sw: 410, sh: 310 }];
+    const globalScale = computeGlobalSpriteScale([
+      { cardBounds: card, topSlotHeight: 68, items: narrowTeam },
+      { cardBounds: card, topSlotHeight: 68, items: wideTeam },
+    ]);
+    const rowA = computeEqualGapSpriteRow(card, 68, narrowTeam, { scaleMultiplier: globalScale });
+    const rowB = computeEqualGapSpriteRow(card, 68, wideTeam, { scaleMultiplier: globalScale });
+    // Charizard is index 2 in rowA and index 1 in rowB -> identical rendered dimensions
+    assert.ok(Math.abs(rowA[2].width - rowB[1].width) < 0.01);
+    assert.ok(Math.abs(rowA[2].height - rowB[1].height) < 0.01);
+  });
+
+  it('optically kerns asymmetric sprites so visual body gaps stay equal without overlapping', () => {
+    const chunky = { sw: 320, sh: 320, coreLeft: 0.04, coreRight: 0.96, leftProfile: Array(24).fill(0), rightProfile: Array(24).fill(1) };
+    // Floette-Eternal style: thin flower stem on the right (only top 2 bands reach 1.0, body ends at 0.80)
+    const floetteRight = Array(24).fill(0.80);
+    floetteRight[0] = 1.0;
+    floetteRight[1] = 1.0;
+    const floette = { sw: 320, sh: 340, coreLeft: 0.08, coreRight: 0.80, leftProfile: Array(24).fill(0.05), rightProfile: floetteRight };
+    // Sneasler style: thin claw on the left (only bottom 2 bands reach 0.0, body starts at 0.14)
+    const sneaslerLeft = Array(24).fill(0.14);
+    sneaslerLeft[22] = 0.0;
+    sneaslerLeft[23] = 0.0;
+    const sneasler = { sw: 240, sh: 360, coreLeft: 0.14, coreRight: 0.94, leftProfile: sneaslerLeft, rightProfile: Array(24).fill(1) };
+
+    const items = [chunky, floette, sneasler, chunky];
+    const slots = computeEqualGapSpriteRow(card, 68, items);
+    // Visual body gap to Floette's left (chunky -> floette) vs to Floette's right (floette -> sneasler) should match!
+    const leftBodyGap = (slots[1].x + floette.coreLeft * slots[1].width) - (slots[0].x + chunky.coreRight * slots[0].width);
+    const rightBodyGap = (slots[2].x + sneasler.coreLeft * slots[2].width) - (slots[1].x + floette.coreRight * slots[1].width);
+    assert.ok(Math.abs(leftBodyGap - rightBodyGap) < 1, `expected equal optical body gaps, got left=${leftBodyGap}, right=${rightBodyGap}`);
+  });
+
+  it('returns empty array for empty items or tiny card', () => {
+    assert.deepEqual(computeEqualGapSpriteRow(card, 68, []), []);
+    assert.deepEqual(computeEqualGapSpriteRow({ x: 0, y: 0, width: 500, height: 50 }, 60, [{ sw: 100, sh: 100 }]), []);
   });
 });
